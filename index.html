@@ -54,6 +54,12 @@
     .section { padding: 30px 20px; }
     .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .section-title { font-size: 22px; font-weight: 900; text-transform: uppercase; }
+    .store-slides { width:100%; aspect-ratio:16/5; min-height:150px; max-height:360px; overflow:hidden; position:relative; background:#f2f2f2; }
+    .store-slide { width:100%;height:100%;position:relative;cursor:pointer;display:none; }
+    .store-slide.active { display:block; }
+    .store-slide img { width:100%;height:100%;object-fit:cover;display:block; }
+    .store-slide-caption { position:absolute;left:5%;bottom:10%;padding:10px 14px;background:rgba(0,0,0,.58);color:#fff;border-radius:6px;font-weight:700; }
+    .admin-table-actions button { margin:2px;padding:5px 8px; }
     .product-scroll { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x mandatory; }
     .product-card { min-width: 200px; flex: 0 0 auto; background: #f9f9f9; padding: 15px; border-radius: 8px; position: relative; cursor: pointer; transition: transform 0.2s; scroll-snap-align: start; }
     .product-card:active { transform: scale(0.98); }
@@ -238,23 +244,16 @@
       </ul>
     </div>
 
-    <div class="hero">
-      <h2>PROTECT YOUR PC<br>WITH PREMIUM SECURITY</h2>
-    </div>
+    <div id="store-slides" class="store-slides" aria-label="Shop promotions"></div>
 
     <div class="section">
-      <div class="section-header"><div class="section-title">TOP ANTIVIRUS</div></div>
+      <div class="section-header"><div class="section-title" id="catalog-heading">TOP ANTIVIRUS</div></div>
       <div class="product-scroll" id="frontend-products"></div>
     </div>
 
     <div class="section" style="background: #fafafa;">
       <div class="section-title" style="margin-bottom: 20px;">POPULAR BRANDS</div>
-      <div class="category-grid">
-        <div class="cat-card"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/McAfee_logo_2017.svg/512px-McAfee_logo_2017.svg.png" alt="McAfee"><div class="cat-name">McAfee <span>→</span></div></div>
-        <div class="cat-card"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Quick_Heal_logo.svg/512px-Quick_Heal_logo.svg.png" alt="Quick Heal"><div class="cat-name">Quick Heal <span>→</span></div></div>
-        <div class="cat-card"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Avast_Software_logo.svg/512px-Avast_Software_logo.svg.png" alt="Avast"><div class="cat-name">Avast <span>→</span></div></div>
-        <div class="cat-card"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Norton_Lifelock_logo.svg/512px-Norton_Lifelock_logo.svg.png" alt="Norton"><div class="cat-name">Norton <span>→</span></div></div>
-      </div>
+      <div class="category-grid" id="popular-brands-grid"></div>
     </div>
 
     <div class="footer">
@@ -367,7 +366,8 @@
       <div class="admin-sidebar">
         <h2>SECURE-TECH ADMIN</h2>
         <button class="admin-menu-btn active" onclick="switchAdminTab('dashboard', this)">📊 Dashboard</button>
-        <button class="admin-menu-btn" onclick="switchAdminTab('inventory', this)">📦 Inventory (Excel)</button>
+        <button class="admin-menu-btn" onclick="switchAdminTab('inventory', this)">📦 Inventory & Products</button>
+        <button class="admin-menu-btn" onclick="switchAdminTab('slides', this)">🖼️ Slides & Banners</button>
         <button class="admin-menu-btn" onclick="switchAdminTab('orders', this)">🛒 Live Orders</button>
         <button class="admin-menu-btn" onclick="switchAdminTab('settings', this)">⚙️ Store Settings</button>
         <button class="admin-menu-btn" onclick="switchAdminTab('footer', this)">📄 Footer & Pages</button>
@@ -407,11 +407,53 @@
                 ⬆️ Import from Excel <input type="file" id="excel-file" accept=".xlsx, .xls" onchange="importExcel(event)" style="display:none;">
               </label>
             </div>
+            <h3 id="product-form-heading">Add / Update Product</h3>
+            <div class="form-grid" style="margin:12px 0">
+              <div class="form-group"><label>Brand *</label><input id="p-brand" placeholder="e.g. McAfee"></div>
+              <div class="form-group"><label>Model / Product Name *</label><input id="p-name" placeholder="Product model"></div>
+              <div class="form-group"><label>Category *</label><input id="p-category" placeholder="e.g. Antivirus"></div>
+              <div class="form-group"><label>Product Price (₹) *</label><input id="p-price" type="number" min="0"></div>
+              <div class="form-group"><label>Installation Charge (₹) — shopkeeper decides *</label><input id="p-install" type="number" min="0" value="0"></div>
+              <div class="form-group"><label>Stock Quantity</label><input id="p-stock" type="number" min="0" value="0"></div>
+              <div class="form-group"><label>Product Image URL</label><input id="p-image" placeholder="https://..."></div>
+              <div class="form-group"><label>Manufacturer</label><input id="p-manufacturer"></div>
+              <div class="form-group"><label>Country of Origin</label><input id="p-origin"></div>
+              <div class="form-group"><label>Imported By</label><input id="p-importer"></div>
+              <div class="form-group"><label>Address</label><input id="p-address"></div>
+              <div class="form-group"><label>Generic Name</label><input id="p-generic"></div>
+              <div class="form-group"><label>Package Contents</label><input id="p-package"></div>
+              <div class="form-group"><label>Installation Guide</label><input id="p-guide"></div>
+              <div class="form-group"><label>Brand Logo URL</label><input id="p-brand-logo"></div>
+              <div class="form-group"><label>Short Description</label><textarea id="p-desc"></textarea></div>
+              <div class="form-group"><label>Benefits (one per line)</label><textarea id="p-benefits" placeholder="Benefit 1&#10;Benefit 2&#10;Benefit 3"></textarea></div>
+              <div class="form-group"><label>Brand Description</label><textarea id="p-brand-desc"></textarea></div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px"><button class="btn" type="button" onclick="saveProduct()" id="save-product-btn">Save Product</button><button class="btn-excel" type="button" onclick="clearProductForm()">Clear Form</button></div>
+            <h3>Product Inventory</h3>
             <table>
-              <thead><tr><th>Brand</th><th>Model/Name</th><th>Price</th><th>Install Chg</th><th>Stock</th></tr></thead>
+              <thead><tr><th>Brand</th><th>Model/Name</th><th>Category</th><th>Price</th><th>Install Chg</th><th>Stock</th><th>Actions</th></tr></thead>
               <tbody id="admin-inventory-table"></tbody>
             </table>
           </div>
+        </div>
+
+        <div id="admin-slides" class="admin-section" style="display:none">
+          <div class="admin-header"><h1>Homepage Slides & Banners</h1></div>
+          <div class="card">
+            <h3>Add / Edit Slide</h3>
+            <div class="form-grid" style="margin:12px 0">
+              <div class="form-group"><label>Slide Title</label><input id="slide-title" placeholder="Summer offer"></div>
+              <div class="form-group"><label>Image URL (paste image link)</label><input id="slide-image" placeholder="https://..."></div>
+              <div class="form-group"><label>Or Upload Image</label><input id="slide-upload" type="file" accept="image/*" onchange="previewSlideUpload(event)"></div>
+              <div class="form-group"><label>Click Destination</label><select id="slide-destination" onchange="toggleSlideTarget()"><option value="categories">All Product Categories</option><option value="brands">All Brand Categories</option><option value="category">Specific Category</option><option value="brand">Specific Brand</option></select></div>
+              <div class="form-group" id="slide-target-wrap" style="display:none"><label>Choose Category / Brand</label><input id="slide-target" placeholder="Enter exact category or brand"></div>
+              <div class="form-group"><label>Display Order</label><input id="slide-order" type="number" value="1" min="1"></div>
+            </div>
+            <div id="slide-preview" style="width:100%;max-width:600px;aspect-ratio:16/5;background:#f3f3f3;border-radius:10px;overflow:hidden;margin:10px 0;display:flex;align-items:center;justify-content:center;color:#777">Image Preview</div>
+            <button class="btn" type="button" onclick="saveSlide()">Save Slide</button> <button class="btn-excel" type="button" onclick="clearSlideForm()">Clear</button>
+            <p style="font-size:12px;color:#666;margin-top:10px">Images automatically fit the banner area. Uploaded images are saved in this browser; for multi-device live images, configure Firebase Storage.</p>
+          </div>
+          <div class="card"><h3>Saved Slides</h3><div id="slide-list"></div></div>
         </div>
 
         <!-- 3. LIVE ORDERS -->
@@ -547,6 +589,7 @@
       catch(e){ return { ...DEFAULT_FIREBASE_CONFIG }; }
     }
     function connectFirebase(){
+      if (typeof firebase === 'undefined') { isFirebaseReady=false; db=null; setFirebaseStatus('Firebase SDK load nahi hua. Local save enabled hai.', false); return false; }
       const valid = firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId && firebaseConfig.appId && !firebaseConfig.apiKey.includes('YOUR_');
       if(!valid){ isFirebaseReady=false; db=null; setFirebaseStatus('Firebase not configured. Local save enabled.', false); return false; }
       try {
@@ -562,6 +605,7 @@
       const cfg={}; keys.forEach(k=>cfg[k]=(document.getElementById('fb-'+k).value||'').trim());
       if(!cfg.apiKey || !cfg.projectId || !cfg.appId){ alert('API Key, Project ID aur App ID required hain.'); return; }
       firebaseConfig=cfg; localStorage.setItem('securetech_firebase_config', JSON.stringify(cfg));
+      if(typeof firebase === 'undefined'){ alert('Firebase SDK load nahi hua. Internet/CDN connection check karein. Config local browser mein save ho gaya.'); return; }
       if(firebase.apps.length){ alert('Firebase config browser mein save ho gaya. Page reload karke new project connect karein.'); location.reload(); return; }
       connectFirebase();
     }
@@ -617,6 +661,13 @@
       }
     ];
     
+    try { const savedProducts = JSON.parse(localStorage.getItem('securetech_products') || 'null'); if (Array.isArray(savedProducts) && savedProducts.length) products = savedProducts; } catch(e) {}
+    let editingProductId = null;
+    let slides = [];
+    try { slides = JSON.parse(localStorage.getItem('securetech_slides') || '[]') || []; } catch(e) { slides = []; }
+    let editingSlideIndex = -1;
+    let uploadedSlideData = '';
+    let activeSlideIndex = 0;
     let bookings = [];
     let currentProductId = null;
 
@@ -667,6 +718,8 @@
       syncSettingsUI(); syncFooterUI();
       if(!isFirebaseReady) return;
       db.collection("settings").doc("store").onSnapshot((doc)=>{ if(doc.exists){storeSettings={...storeSettings,...doc.data()};localStorage.setItem('securetech_store_settings',JSON.stringify(storeSettings));} syncSettingsUI();renderFrontend(); }, err=>setFirebaseStatus('Firestore read error: '+err.message,false));
+      db.collection('catalog').doc('products').onSnapshot(doc=>{if(doc.exists&&Array.isArray(doc.data().items)){products=doc.data().items;localStorage.setItem('securetech_products',JSON.stringify(products));renderFrontend();renderAdminData();}},err=>console.warn('Catalog sync:',err));
+      db.collection('settings').doc('slides').onSnapshot(doc=>{if(doc.exists&&Array.isArray(doc.data().items)){slides=doc.data().items;localStorage.setItem('securetech_slides',JSON.stringify(slides));renderSlides();renderSlideList();}},err=>console.warn('Slides sync:',err));
       db.collection("settings").doc("footer").onSnapshot((doc)=>{ if(doc.exists){storeSettings={...storeSettings,...doc.data()};localStorage.setItem('securetech_store_settings',JSON.stringify(storeSettings));} syncFooterUI(); }, err=>setFirebaseStatus('Firestore footer read error: '+err.message,false));
     }
 
@@ -749,8 +802,10 @@
     }
 
     function renderFrontend() {
+      const heading=document.getElementById('catalog-heading'); if(heading) heading.innerText='TOP ANTIVIRUS';
       const container = document.getElementById('frontend-products');
       container.innerHTML = '';
+      renderSlides(); renderBrandCategories();
       products.forEach(p => {
         const card = document.createElement('div');
         card.className = 'product-card';
@@ -778,8 +833,8 @@
       document.getElementById('d-name').innerText = p.name;
       
       document.getElementById('d-price').innerText = `₹${p.price}`;
-      document.getElementById('d-install').innerText = `₹${p.installCharge || storeSettings.installCharge}`;
-      document.getElementById('d-total').innerText = `₹${p.price + (p.installCharge || storeSettings.installCharge)}`;
+      document.getElementById('d-install').innerText = `₹${Number(p.installCharge ?? 0)}`;
+      document.getElementById('d-total').innerText = `₹${p.price + (Number(p.installCharge ?? 0))}`;
       
       document.getElementById('d-desc').innerText = p.desc;
       const bList = document.getElementById('d-benefits');
@@ -824,7 +879,7 @@
     function openBookingModal() {
       if(!currentProductId) return;
       const p = products.find(x => x.id === currentProductId);
-      document.getElementById('modal-total-amount').innerText = `₹${p.price + (p.installCharge || storeSettings.installCharge)}`;
+      document.getElementById('modal-total-amount').innerText = `₹${p.price + (Number(p.installCharge ?? 0))}`;
       document.getElementById('booking-modal').classList.add('active');
     }
 
@@ -837,23 +892,24 @@
       const name = document.getElementById('book-name').value;
       const phone = document.getElementById('book-phone').value;
       const p = products.find(x => x.id === currentProductId);
+      if(!p){ alert('Selected product nahi mila. Dobara product open karein.'); return; }
 
       const newBooking = { customer: name, contact: phone, productName: p.name, status: "Pending", agent: "Unassigned", date: new Date().toISOString() };
 
       if(isFirebaseReady) {
         db.collection("orders").add(newBooking).then(() => {
-          alert(`Booking Confirmed!\nTotal Amount: ₹${p.price + (p.installCharge || storeSettings.installCharge)}`);
+          alert(`Booking Confirmed!\nTotal Amount: ₹${p.price + (Number(p.installCharge ?? 0))}`);
           closeBookingModal();
           closeProductDetail();
-          p.stock -= 1;
-        });
+          p.stock = Math.max(0, Number(p.stock || 0) - 1); persistProducts();
+        }).catch(err=>alert('Booking save nahi hui: '+err.message));
       } else {
         bookings.push(newBooking);
         renderAdminData();
-        alert(`Booking Confirmed!\nTotal Amount: ₹${p.price + (p.installCharge || storeSettings.installCharge)}`);
+        alert(`Booking Confirmed!\nTotal Amount: ₹${p.price + (Number(p.installCharge ?? 0))}`);
         closeBookingModal();
         closeProductDetail();
-        p.stock -= 1;
+        p.stock = Math.max(0, Number(p.stock || 0) - 1); persistProducts();
       }
     }
 
@@ -862,7 +918,7 @@
       const tbody = document.getElementById('admin-inventory-table');
       tbody.innerHTML = '';
       products.forEach(p => {
-        tbody.innerHTML += `<tr><td>${p.brand}</td><td>${p.name}</td><td>₹${p.price}</td><td>₹${p.installCharge || storeSettings.installCharge}</td><td>${p.stock}</td></tr>`;
+        tbody.innerHTML += `<tr><td>${p.brand}</td><td>${p.name}</td><td>${p.category || '-'}</td><td>₹${p.price}</td><td>₹${Number(p.installCharge ?? 0)}</td><td>${p.stock}</td><td class="admin-table-actions"><button onclick="editProduct(${Number(p.id)})">Edit</button><button onclick="deleteProduct(${Number(p.id)})">Delete</button></td></tr>`;
       });
 
       if(isFirebaseReady) {
@@ -923,9 +979,10 @@
         products = jsonData.map((item, index) => ({
           id: item.id || Date.now() + index,
           brand: item.brand || 'Unknown',
+          category: item.category || 'General',
           name: item.name || 'Product',
           price: Number(item.price) || 0,
-          installCharge: Number(item.installCharge) || storeSettings.installCharge,
+          installCharge: Number(item.installCharge ?? 0),
           stock: Number(item.stock) || 0,
           image: item.image || 'https://via.placeholder.com/150',
           desc: item.desc || 'No description.',
@@ -940,12 +997,43 @@
           brandDesc: item.brandDesc || 'Leading brand.'
         }));
 
+        localStorage.setItem('securetech_products', JSON.stringify(products));
         alert("Excel Data Imported Successfully!");
         renderAdminData();
         renderFrontend();
       };
       reader.readAsArrayBuffer(file);
     }
+
+    // ================ SHOPKEEPER PRODUCT & SLIDE MANAGEMENT ================
+    function persistProducts(){ localStorage.setItem('securetech_products', JSON.stringify(products)); if(isFirebaseReady) db.collection('catalog').doc('products').set({items:products}).catch(e=>console.warn('Firebase product sync:',e)); renderFrontend(); renderAdminData(); }
+    function productField(id){ return document.getElementById(id).value.trim(); }
+    function saveProduct(){
+      const brand=productField('p-brand'), name=productField('p-name'), priceRaw=productField('p-price'), installRaw=productField('p-install');
+      if(!brand || !name || priceRaw==='' || installRaw===''){ alert('Brand, Product Name, Product Price aur Installation Charge bharna zaroori hai. Charge dukandaar khud decide karega; ₹0 bhi allowed hai.'); return; }
+      const data={brand,name,category:productField('p-category')||'General',price:Math.max(0,Number(priceRaw)||0),installCharge:Math.max(0,Number(installRaw)||0),stock:Math.max(0,Number(productField('p-stock'))||0),image:productField('p-image')||'https://via.placeholder.com/500x350?text=Product',manufacturer:productField('p-manufacturer'),origin:productField('p-origin'),importer:productField('p-importer'),address:productField('p-address'),generic:productField('p-generic'),package:productField('p-package'),guide:productField('p-guide'),brandLogo:productField('p-brand-logo'),desc:productField('p-desc'),benefits:productField('p-benefits').split('\n').map(x=>x.trim()).filter(Boolean),brandDesc:productField('p-brand-desc')};
+      if(editingProductId!==null){ const i=products.findIndex(x=>String(x.id)===String(editingProductId)); if(i>=0) products[i]={...products[i],...data}; }
+      else products.push({id:Date.now(),...data});
+      persistProducts(); clearProductForm(); alert('Product saved successfully.');
+    }
+    function editProduct(id){ const p=products.find(x=>String(x.id)===String(id)); if(!p)return; editingProductId=p.id; const map={brand:'brand',name:'name',category:'category',price:'price',install:'installCharge',stock:'stock',image:'image',manufacturer:'manufacturer',origin:'origin',importer:'importer',address:'address',generic:'generic',package:'package',guide:'guide', 'brand-logo':'brandLogo',desc:'desc','brand-desc':'brandDesc'}; Object.entries(map).forEach(([k,v])=>{const el=document.getElementById('p-'+k);if(el)el.value=p[v]??'';}); document.getElementById('p-benefits').value=(Array.isArray(p.benefits)?p.benefits:[p.benefits||'']).join('\n'); document.getElementById('product-form-heading').innerText='Edit Product';document.getElementById('save-product-btn').innerText='Update Product';document.getElementById('admin-inventory').scrollTo(0,0); }
+    function clearProductForm(){ editingProductId=null; ['brand','name','category','price','install','stock','image','manufacturer','origin','importer','address','generic','package','guide','brand-logo','desc','benefits','brand-desc'].forEach(k=>{const e=document.getElementById('p-'+k);if(e)e.value=(k==='install'||k==='stock')?'0':'';});document.getElementById('product-form-heading').innerText='Add / Update Product';document.getElementById('save-product-btn').innerText='Save Product'; }
+    function deleteProduct(id){ if(!confirm('Is product ko delete karna hai?'))return; products=products.filter(p=>String(p.id)!==String(id));persistProducts(); }
+    function renderBrandCategories(){ const box=document.getElementById('popular-brands-grid');if(!box)return;const brands=[...new Set(products.map(p=>p.brand).filter(Boolean))];box.innerHTML=brands.map(b=>{const p=products.find(x=>x.brand===b);return `<div class="cat-card" onclick="openBrandCategory(${JSON.stringify(b).replace(/</g,'\\u003c')})"><img src="${p.brandLogo||p.image||''}" alt=""><div class="cat-name">${b} <span>→</span></div></div>`}).join(''); }
+    function openBrandCategory(brand){ openCatalog('brand',brand); }
+    function renderCategoryChooser(type){const vals=[...new Set(products.map(p=>type==='brand'?p.brand:(p.category||'General')).filter(Boolean))];const box=document.getElementById('frontend-products');box.innerHTML='';vals.forEach(v=>{const card=document.createElement('div');card.className='product-card';const p=products.find(x=>(type==='brand'?x.brand:(x.category||'General'))===v);card.onclick=()=>openCatalog(type,v);card.innerHTML=`<img src="${p?.brandLogo||p?.image||''}" class="product-img" alt=""><div class="product-name">${v}</div><div class="product-brand">${type==='brand'?'Brand':'Category'}</div>`;box.appendChild(card);});document.getElementById('catalog-heading').innerText=type==='brand'?'BRAND CATEGORIES':'PRODUCT CATEGORIES';window.scrollTo(0,0); }
+    function openCatalog(type,value){ const matches=products.filter(p=>type==='brand'?p.brand===value:(p.category||'General')===value); if(!matches.length){alert('Is category mein abhi product nahi hai.');return;} const box=document.getElementById('frontend-products');box.innerHTML='';matches.forEach(p=>{const card=document.createElement('div');card.className='product-card';card.onclick=()=>openProductDetail(p.id);card.innerHTML=`<img src="${p.image}" class="product-img"><div class="product-brand">${p.brand}</div><div class="product-name">${p.name}</div><div class="product-price">₹${p.price}</div>`;box.appendChild(card);});document.getElementById('catalog-heading').innerText=type==='brand'?value:value+' PRODUCTS';document.getElementById('website-view').scrollTo(0,0);window.scrollTo(0,0); }
+    function renderSlides(){ const box=document.getElementById('store-slides');if(!box)return; if(!slides.length){box.innerHTML='<div class="store-slide"><img src="https://via.placeholder.com/1400x440?text=Your+Shop+Banner" alt="Shop banner"></div>';return;} box.innerHTML=slides.slice().sort((a,b)=>(a.order||0)-(b.order||0)).map((x,i)=>`<div class="store-slide ${i===activeSlideIndex?'active':''}" onclick="slideNavigate(${i})"><img src="${x.image}" alt="${x.title||'Shop banner'}" onerror="this.src='https://via.placeholder.com/1400x440?text=Image+Not+Available'"><div class="store-slide-caption">${x.title||''}</div></div>`).join(''); }
+    function toggleSlideTarget(){const v=productField('slide-destination');document.getElementById('slide-target-wrap').style.display=['category','brand'].includes(v)?'block':'none';}
+    function previewSlideUpload(e){const f=e.target.files&&e.target.files[0];if(!f)return;if(f.size>500000){alert('Uploaded image 500 KB se chhoti rakhein. Badi image ke liye image URL use karein.');e.target.value='';return;}const r=new FileReader();r.onload=()=>{uploadedSlideData=String(r.result);showSlidePreview(uploadedSlideData);};r.onerror=()=>alert('Image read nahi ho payi. Dobara try karein ya image URL use karein.');r.readAsDataURL(f);}
+    function showSlidePreview(src){document.getElementById('slide-preview').innerHTML=src?`<img src="${src}" style="width:100%;height:100%;object-fit:cover">`:'Image Preview';}
+    function saveSlide(){const title=productField('slide-title'),url=productField('slide-image'),image=uploadedSlideData||url;if(!image){alert('Image URL ya image upload karein.');return;}const dest=productField('slide-destination'),target=productField('slide-target');if(['category','brand'].includes(dest)&&!target){alert('Category ya Brand ka naam enter karein.');return;}const item={title,image,destination:dest,target,order:Number(productField('slide-order'))||1};const previous=slides.slice();if(editingSlideIndex>=0)slides[editingSlideIndex]=item;else slides.push(item);try{localStorage.setItem('securetech_slides',JSON.stringify(slides));}catch(err){slides=previous;alert('Browser storage full hai. Chhoti image use karein ya image URL paste karein.');return;}if(isFirebaseReady){db.collection('settings').doc('slides').set({items:slides},{merge:true}).catch(e=>alert('Slide is browser mein save hua, Firebase sync failed: '+e.message));}clearSlideForm();renderSlides();renderSlideList();alert('Slide saved. Uploaded image isi browser mein rahegi; multiple devices ke liye image URL use karein ya Firebase Storage setup karein.');}
+    function nextStoreSlide(){const box=document.getElementById('store-slides');if(!box||!slides.length)return;const els=box.querySelectorAll('.store-slide');if(!els.length)return;els[activeSlideIndex%els.length]?.classList.remove('active');activeSlideIndex=(activeSlideIndex+1)%els.length;els[activeSlideIndex]?.classList.add('active');}
+    function slideNavigate(i){const x=slides.slice().sort((a,b)=>(a.order||0)-(b.order||0))[i];if(!x)return;if(x.destination==='categories'){renderCategoryChooser('category');return;}if(x.destination==='brands'){renderCategoryChooser('brand');return;}openCatalog(x.destination,x.target);}
+    function renderSlideList(){const box=document.getElementById('slide-list');if(!box)return;box.innerHTML=slides.map((x,i)=>`<div style="display:flex;gap:12px;align-items:center;padding:10px;border-bottom:1px solid #eee;flex-wrap:wrap"><img src="${x.image}" style="width:110px;height:55px;object-fit:cover;border-radius:5px"><div style="flex:1"><b>${x.title||'Untitled Slide'}</b><br><small>${x.destination}${x.target?' → '+x.target:''} | Order ${x.order}</small></div><button onclick="editSlide(${i})">Edit</button><button onclick="deleteSlide(${i})">Delete</button></div>`).join('')||'No slides added yet.';}
+    function editSlide(i){const x=slides[i];editingSlideIndex=i;uploadedSlideData='';document.getElementById('slide-title').value=x.title||'';document.getElementById('slide-image').value=x.image.startsWith('data:')?'':x.image;document.getElementById('slide-destination').value=x.destination;document.getElementById('slide-target').value=x.target||'';document.getElementById('slide-order').value=x.order||1;toggleSlideTarget();showSlidePreview(x.image);}
+    function deleteSlide(i){if(!confirm('Delete this slide?'))return;slides.splice(i,1);localStorage.setItem('securetech_slides',JSON.stringify(slides));renderSlides();renderSlideList();}
+    function clearSlideForm(){editingSlideIndex=-1;uploadedSlideData='';['slide-title','slide-image','slide-target'].forEach(id=>document.getElementById(id).value='');document.getElementById('slide-upload').value='';document.getElementById('slide-order').value='1';document.getElementById('slide-destination').value='categories';toggleSlideTarget();showSlidePreview('');}
 
     // ================= AGENT LOGIC =================
     function renderAgentTasks() {
@@ -994,6 +1082,8 @@
       showView('website-view');
       fetchSettings();
       renderFrontend();
+      renderSlideList();
+      if(window.storeSlideTimer) clearInterval(window.storeSlideTimer); window.storeSlideTimer=setInterval(nextStoreSlide,4500);
       fillFirebaseFields();
     };
   </script>
