@@ -1,0 +1,2804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Om Sai Enterprises - Software & Multi-Business Store</title>
+
+  <!-- Firebase Compat SDKs (Firestore + Auth) & SheetJS (Excel) & QRCode.js -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    /* ================= GLOBAL STYLES ================= */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background: #fff; color: #111; overflow-x: hidden; line-height: 1.45; }
+    a { text-decoration: none; color: inherit; }
+    button { cursor: pointer; font-family: inherit; outline: none; border: none; transition: opacity 0.15s, transform 0.1s; }
+    button:active { transform: scale(0.98); }
+    html { scroll-behavior: smooth; }
+    .hidden { display: none !important; }
+    img { max-width: 100%; }
+
+    /* ================= LOGIN SCREEN ================= */
+    #login-screen { position: fixed; inset: 0; z-index: 20000; min-height: 100vh; min-height: 100dvh; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,.78); padding: 18px; }
+    .login-box { background: #fff; padding: 26px; border-radius: 12px; width: 100%; max-width: 410px; text-align: center; box-shadow: 0 12px 35px rgba(0,0,0,.3); max-height: 92dvh; overflow-y: auto; }
+    .login-box h2 { margin-bottom: 14px; color: #111; }
+    .login-box input, .login-box select { width: 100%; padding: 11px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+    .login-box button.primary-btn { width: 100%; padding: 12px; background: #111; color: #fff; border-radius: 6px; font-weight: bold; font-size: 15px; }
+
+    /* ================= HEADER & NOTE TICKER ================= */
+    header { background: #111; color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; position: sticky; top: 0; z-index: 100; gap: 10px; flex-wrap: wrap; }
+    .header-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .menu-icon { font-size: 24px; cursor: pointer; padding: 4px 8px; background: none; color: #fff; }
+    .logo { font-size: 17px; font-weight: 900; letter-spacing: 0.6px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .header-search-wrap { flex: 1 1 220px; max-width: 440px; display: flex; align-items: center; background: #222; border-radius: 20px; padding: 6px 12px; border: 1px solid #333; }
+    .header-search-wrap input { background: transparent; border: none; color: #fff; width: 100%; font-size: 14px; outline: none; padding-left: 6px; }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .header-pill-btn { background: #222; color: #fff; border: 1px solid #444; padding: 7px 11px; border-radius: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+
+    @media (max-width: 640px) {
+      .header-search-wrap { order: 3; flex: 1 1 100%; max-width: 100%; }
+      .logo { font-size: 15px; max-width: 185px; }
+    }
+
+    /* Top Announcement / Note Slideshow Bar */
+    .note-ticker-bar { background: #fffae6; color: #111; border-bottom: 1px solid #ffe58f; padding: 8px 14px; display: flex; align-items: center; justify-content: center; text-align: center; min-height: 36px; }
+    .note-ticker-text { font-weight: 700; word-break: break-word; }
+
+    /* Sidebar */
+    .sidebar { position: fixed; top: 0; left: -100%; width: 85%; max-width: 330px; height: 100vh; height: 100dvh; background: #111; color: #fff; z-index: 250; transition: left 0.28s ease-in-out; overflow-y: auto; display: flex; flex-direction: column; justify-content: space-between; }
+    .sidebar.active { left: 0; }
+    .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200; display: none; }
+    .sidebar-overlay.active { display: block; }
+    .sidebar-top { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #333; font-weight: bold; font-size: 14px; }
+    .sidebar-links { list-style: none; padding: 10px 20px; }
+    .sidebar-links li { padding: 13px 0; font-size: 15px; font-weight: 600; letter-spacing: 0.4px; border-bottom: 1px solid #222; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .sidebar-links li:hover { color: #00d4ff; }
+    .sidebar-links li.highlight-menu { color: #ffd700; }
+
+    /* ================= SLIDES, BANNERS, CARDS, MINI, NOTES & VIDEO ================= */
+    .store-slides { width: 100%; aspect-ratio: 16/5; min-height: 160px; max-height: 360px; overflow: hidden; position: relative; background: #181818; }
+    .store-slide { width: 100%; height: 100%; position: relative; cursor: pointer; display: none; }
+    .store-slide.active { display: block; }
+    .store-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .store-slide-caption { position: absolute; left: 5%; bottom: 10%; padding: 8px 14px; background: rgba(0,0,0,.68); color: #fff; border-radius: 6px; font-weight: 700; font-size: 14px; max-width: 90%; }
+
+    .promo-blocks-wrap { padding: 16px 16px 0; display: flex; flex-direction: column; gap: 14px; max-width: 1200px; margin: 0 auto; }
+    .promo-note-box { background: #e6f4ff; border-left: 4px solid #1677ff; padding: 12px 16px; border-radius: 6px; font-size: 14px; color: #003a8c; font-weight: 600; }
+    .promo-warning-box { background: #fff2f0; border-left: 4px solid #ff4d4f; padding: 12px 16px; border-radius: 6px; font-size: 14px; color: #a8071a; font-weight: 700; }
+    .promo-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .promo-card-item { border-radius: 10px; overflow: hidden; border: 1px solid #eee; background: #fafafa; cursor: pointer; }
+    .promo-card-item img { width: 100%; height: 145px; object-fit: cover; display: block; }
+    .promo-card-item .p-cap { padding: 10px; font-weight: 700; font-size: 14px; }
+    .promo-mini-strip { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; }
+    .promo-mini-item { flex: 0 0 auto; width: 105px; text-align: center; cursor: pointer; }
+    .promo-mini-item img { width: 84px; height: 84px; object-fit: cover; border-radius: 50%; border: 2px solid #111; }
+    .promo-mini-item div { font-size: 12px; font-weight: 700; margin-top: 5px; }
+    .promo-video-box { background: #111; border-radius: 10px; overflow: hidden; padding: 12px; color: #fff; }
+    .promo-video-box iframe, .promo-video-box video { width: 100%; height: 280px; border: none; border-radius: 8px; display: block; }
+
+    /* ================= SECTIONS & PRODUCT CARDS ================= */
+    .section { padding: 24px 16px; max-width: 1200px; margin: 0 auto; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+    .section-title { font-size: 19px; font-weight: 900; text-transform: uppercase; }
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 14px; }
+    @media (min-width: 640px) { .product-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; } }
+    .product-card { background: #f9f9f9; padding: 13px; border-radius: 10px; position: relative; cursor: pointer; border: 1px solid #eee; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; justify-content: space-between; }
+    .product-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+    .product-img { width: 100%; height: 130px; object-fit: contain; margin-bottom: 10px; background: #fff; border-radius: 6px; padding: 8px; }
+    .product-brand { font-size: 11px; color: #666; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+    .product-name { font-size: 14px; font-weight: 800; margin-bottom: 6px; line-height: 1.3; }
+    .product-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .p-tag { font-size: 10px; background: #eaeaea; color: #333; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+    .product-price { font-size: 16px; font-weight: 900; color: #111; }
+    .badge-status { font-size: 10px; color: #fff; padding: 3px 7px; border-radius: 4px; display: inline-block; margin-top: 6px; font-weight: 700; width: fit-content; }
+    .badge-instock { background: #28a745; }
+    .badge-out { background: #dc3545; }
+    .badge-notify { background: #fd7e14; }
+    .badge-new { background: #007bff; }
+
+    /* Brand Store Banner */
+    .brand-store-header { background: #111; color: #fff; border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
+    .brand-store-header img { width: 100%; max-height: 220px; object-fit: cover; display: block; }
+    .brand-store-bar { padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+
+    .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 12px; }
+    .cat-card { background: #fff; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; height: 140px; border-radius: 10px; cursor: pointer; border: 1px solid #e5e5e5; }
+    .cat-card img { width: 100%; height: 70px; object-fit: contain; }
+    .cat-card .cat-name { font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Footer */
+    .footer { background: #111; color: #fff; padding: 32px 16px; margin-top: 28px; }
+    .footer-inner { max-width: 1200px; margin: 0 auto; }
+    .footer h3 { margin-bottom: 12px; font-size: 15px; color: #00d4ff; }
+    .footer-details-list { list-style: none; font-size: 13px; color: #ccc; line-height: 1.8; margin-bottom: 20px; word-break: break-word; }
+    .footer-links { list-style: none; margin-bottom: 20px; }
+    .footer-links li { margin-bottom: 10px; font-size: 13px; color: #aaa; cursor: pointer; }
+    .footer-links li:hover { color: #fff; }
+    .social-icons { display: flex; gap: 12px; margin-top: 10px; }
+    .social-icons a { background: #222; width: 38px; height: 38px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 17px; color: #fff; }
+
+    /* ================= PRODUCT DETAIL PAGE ================= */
+    #product-detail-view { display: none; background: #fff; min-height: 100vh; width: 100%; }
+    #product-detail-view:not(.hidden) { display: block; }
+    .detail-header { background: #111; color: #fff; display: flex; align-items: center; padding: 14px 16px; gap: 12px; position: sticky; top: 0; z-index: 100; }
+    .back-btn { font-size: 22px; background: none; color: white; padding: 2px 6px; }
+    .detail-main-layout { display: flex; flex-direction: column; padding: 18px 16px; gap: 24px; max-width: 1150px; margin: 0 auto; }
+    .gallery-container { display: flex; flex-direction: column; gap: 10px; }
+    .main-image { width: 100%; height: 290px; background: #f5f5f5; border-radius: 10px; display: flex; justify-content: center; align-items: center; padding: 20px; }
+    .main-image img { max-width: 90%; max-height: 90%; object-fit: contain; }
+    .detail-brand { font-size: 12px; color: #777; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-weight: 700; }
+    .detail-name { font-size: 22px; font-weight: 800; line-height: 1.25; margin-bottom: 10px; }
+    .price-box { background: #f9f9f9; padding: 14px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #eee; }
+    .price-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #555; }
+    .price-row.total { border-top: 1px dashed #ccc; padding-top: 10px; margin-top: 5px; font-size: 18px; font-weight: bold; color: #000; }
+    .selector-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; color: #333; text-transform: uppercase; }
+    .variant-grid { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .variant-btn { padding: 9px 13px; border: 1px solid #ccc; background: #fff; font-size: 13px; border-radius: 6px; font-weight: 700; }
+    .variant-btn.active { border: 2px solid #111; background: #111; color: #fff; }
+    .btn-add-cart { width: 100%; padding: 14px; background: #111; color: #fff; font-weight: bold; font-size: 15px; border-radius: 6px; margin-bottom: 10px; }
+    .tabs-header { display: flex; border-bottom: 2px solid #eee; margin: 16px 0; overflow-x: auto; }
+    .tab-btn { padding: 10px 14px; font-size: 13px; font-weight: bold; color: #777; background: none; border-bottom: 2px solid transparent; white-space: nowrap; }
+    .tab-btn.active { color: #111; border-bottom: 2px solid #111; }
+    .tab-content { display: none; font-size: 14px; color: #444; line-height: 1.65; }
+    .tab-content.active { display: block; }
+    .pd-list { list-style: none; }
+    .pd-list li { margin-bottom: 10px; border-bottom: 1px solid #f2f2f2; padding-bottom: 6px; }
+    @media (min-width: 768px) {
+      .detail-main-layout { flex-direction: row; padding: 36px 20px; }
+      .gallery-container { flex: 1.1; }
+      .product-info-side { flex: 1; }
+    }
+
+    /* ================= ADMIN & AGENT PANEL ================= */
+    #admin-view, #agent-view { display: none; background: #f4f5f8; min-height: 100vh; }
+    #admin-view:not(.hidden), #agent-view:not(.hidden) { display: block; }
+    .admin-layout { display: flex; min-height: 100vh; }
+    .admin-sidebar { width: 245px; background: #111; color: #fff; padding: 18px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; }
+    .admin-sidebar h2 { font-size: 15px; margin-bottom: 16px; color: #00d4ff; letter-spacing: 0.8px; }
+    .admin-menu-btn { display: block; width: 100%; text-align: left; background: none; color: #bbb; padding: 11px 14px; font-size: 13px; font-weight: 600; border-radius: 6px; }
+    .admin-menu-btn:hover, .admin-menu-btn.active { background: #222; color: #fff; }
+    .admin-main { flex: 1; padding: 16px; overflow-x: auto; min-width: 0; }
+    .card { background: #fff; padding: 16px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 18px; }
+    .card h3 { margin-bottom: 14px; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+    .btn { background: #111; color: #fff; padding: 9px 15px; font-weight: 700; border-radius: 6px; font-size: 13px; }
+    .btn-green { background: #28a745; color: #fff; padding: 9px 14px; border-radius: 6px; font-weight: 700; font-size: 13px; }
+    .btn-blue { background: #007bff; color: #fff; padding: 8px 12px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+    .btn-red { background: #dc3545; color: #fff; padding: 8px 12px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+    .btn-wa { background: #25D366; color: #fff; padding: 8px 12px; border-radius: 6px; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; }
+    .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; min-width: 620px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { background: #f8f9fa; font-weight: 700; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+    .form-group label { display: block; margin-bottom: 4px; font-weight: 700; font-size: 12px; color: #444; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 9px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; background: #f9f9f9; padding: 8px 10px; border-radius: 6px; border: 1px solid #eee; margin-top: 4px; font-size: 12px; }
+
+    /* ================= MODALS & INVOICE PRINT ================= */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 10000; justify-content: center; align-items: center; padding: 14px; overflow-y: auto; }
+    .modal.active { display: flex; }
+    .modal-content { background: #fff; width: 100%; max-width: 520px; padding: 20px; border-radius: 10px; max-height: 92vh; max-height: 92dvh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+    .close-btn { background: none; font-size: 24px; color: #333; padding: 0 6px; }
+
+    /* Bill / Invoice Sheet */
+    .invoice-paper { border: 2px solid #111; padding: 18px; border-radius: 6px; background: #fff; color: #111; font-size: 13px; }
+    .inv-head { display: flex; justify-content: space-between; border-bottom: 2px solid #111; padding-bottom: 12px; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
+    .inv-table { width: 100%; border-collapse: collapse; margin: 14px 0; min-width: 0; }
+    .inv-table th, .inv-table td { border: 1px solid #111; padding: 7px; text-align: left; font-size: 12px; }
+    .inv-table th { background: #f0f0f0; }
+    .inv-renewal-box { background: #fffbe6; border: 1.5px solid #111; padding: 10px; margin: 12px 0; font-size: 14px; }
+    .inv-terms { font-size: 11px; color: #444; border-top: 1px dashed #999; padding-top: 10px; margin-top: 12px; }
+    .inv-footer-auto { margin-top: 12px; padding-top: 8px; border-top: 2px solid #111; font-weight: 700; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printable-bill-area, #printable-bill-area * { visibility: visible; }
+      #printable-bill-area { position: fixed; left: 0; top: 0; width: 100%; }
+      .no-print { display: none !important; }
+    }
+
+    @media (max-width: 768px) {
+      .admin-layout { flex-direction: column; }
+      .admin-sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 10px; gap: 6px; -webkit-overflow-scrolling: touch; }
+      .admin-sidebar h2 { display: none; }
+      .admin-menu-btn { white-space: nowrap; width: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= LOGIN SCREEN ================= -->
+  <div id="login-screen" class="hidden">
+    <div class="login-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h2 style="margin:0">Staff Portal Login</h2>
+        <button type="button" onclick="closeRoleLogin()" style="font-size:24px;background:none;">×</button>
+      </div>
+      <select id="login-role" onchange="toggleLoginModeHint()">
+        <option value="admin">Admin (Shop Owner)</option>
+        <option value="agent">Agent (Technician)</option>
+      </select>
+      <input type="text" id="login-user" placeholder="Admin Email / Username">
+      <input type="password" id="login-pass" placeholder="Password">
+      <button type="button" class="primary-btn" onclick="handleLogin()">Login</button>
+      <p id="login-mode-hint" style="font-size:12px;color:#666;margin-top:10px;">Firebase Auth enabled: Admin Email/Password se login karein.</p>
+    </div>
+  </div>
+
+  <!-- ================= CUSTOMER WEBSITE ================= -->
+  <div id="website-view">
+    <header>
+      <div class="header-left">
+        <button type="button" class="menu-icon" onclick="toggleMenu()" aria-label="Menu">☰</button>
+        <div class="logo" id="header-business-name" onclick="resetStorefront()">OM SAI ENTERPRISES</div>
+      </div>
+      <div class="header-search-wrap" id="header-search-box">
+        <span>🔍</span>
+        <input type="text" id="store-search-input" placeholder="Search Antivirus, MS Office, Brands..." oninput="handleStoreSearch(this.value)">
+      </div>
+      <div class="header-actions">
+        <button type="button" class="header-pill-btn" onclick="openBillDownloadModal()">📄 Bill Download</button>
+      </div>
+    </header>
+
+    <!-- Header Ke Niche Note Slideshow / Ticker -->
+    <div class="note-ticker-bar" id="note-ticker-bar">
+      <span id="note-ticker-text" class="note-ticker-text">⚡ Genuine Antivirus & MS Office Keys • Instant Online & Doorstep Installation!</span>
+    </div>
+
+    <!-- Customer Pending Payment Notification Banner -->
+    <div id="customer-pending-payment-banner" class="hidden" style="background:#fff7e6;border-bottom:1px solid #ffd591;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div style="font-size:13px;color:#873800;font-weight:700;" id="pending-payment-banner-text">
+        ⏳ Aapne booking ki hai, lekin kisi kaaran payment abhi pending hai.
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button type="button" class="btn-green" style="padding:6px 11px;font-size:12px;" onclick="openCustomerHistoryModal()">📜 History / Complete Payment</button>
+        <button type="button" style="background:none;font-size:18px;color:#873800;padding:0 4px;" onclick="dismissPendingBanner()" title="Hide">×</button>
+      </div>
+    </div>
+
+    <!-- Left Sidebar Menu -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMenu()"></div>
+    <div class="sidebar" id="sidebar">
+      <div>
+        <div class="sidebar-top">
+          <span id="sidebar-brand-title">MENU</span>
+          <button type="button" onclick="toggleMenu()" style="background:none;color:#fff;font-size:22px;">×</button>
+        </div>
+        <ul class="sidebar-links" id="dynamic-left-menu"></ul>
+      </div>
+      <div style="padding: 15px 20px; border-top: 1px solid #333; display:flex; flex-direction:column; gap:10px;">
+        <button type="button" class="btn-blue" onclick="openRoleLogin('admin');toggleMenu()">👤 Admin Login</button>
+        <button type="button" class="btn-green" onclick="openRoleLogin('agent');toggleMenu()">🛠️ Agent Login</button>
+      </div>
+    </div>
+
+    <!-- Hero Slides -->
+    <div id="store-slides" class="store-slides" aria-label="Shop promotions"></div>
+
+    <!-- Cards / Mini Images / Notes / Warnings / Videos -->
+    <div class="promo-blocks-wrap" id="promo-blocks-container"></div>
+
+    <!-- Brand Store Banner (Visible when a Brand is selected) -->
+    <div class="section hidden" id="brand-store-section">
+      <div class="brand-store-header">
+        <img id="brand-store-banner-img" src="" alt="Brand Banner">
+        <div class="brand-store-bar">
+          <div>
+            <h2 id="brand-store-title" style="font-size:19px;">BRAND STORE</h2>
+            <small id="brand-store-sub" style="color:#ccc;">Official Products & Licenses</small>
+          </div>
+          <button type="button" class="btn-blue" onclick="resetStorefront()">← All Products</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Product Catalog -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title" id="catalog-heading">ALL PRODUCTS</div>
+        <button type="button" class="header-pill-btn" style="background:#111;" onclick="resetStorefront()">Show All</button>
+      </div>
+      <div class="product-grid" id="frontend-products"></div>
+    </div>
+
+    <!-- Brand Store Grid -->
+    <div class="section" style="background: #fafafa; border-radius: 12px;">
+      <div class="section-title" style="margin-bottom: 16px;">BRAND STORES</div>
+      <div class="category-grid" id="popular-brands-grid"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-inner">
+        <h3 id="footer-biz-heading">📞 STORE & CONTACT DETAILS</h3>
+        <ul class="footer-details-list" id="footer-dynamic-details"></ul>
+        <div style="display: flex; gap: 30px; flex-wrap:wrap;">
+          <div style="flex: 1; min-width: 200px;">
+            <h3>QUICK LINKS</h3>
+            <ul class="footer-links">
+              <li onclick="openWhatsAppSupportModal()">💬 WHATSAPP SUPPORT & ENQUIRY</li>
+              <li onclick="openBillDownloadModal()">📄 DOWNLOAD BILL (PDF)</li>
+              <li onclick="showInfoModal('About Us', state.settings.fields.about.value)">ABOUT US</li>
+              <li onclick="showInfoModal('Terms & Conditions', state.settings.terms)">TERMS & CONDITIONS</li>
+            </ul>
+          </div>
+          <div style="flex: 1; min-width: 200px;">
+            <h3>SOCIAL MEDIA</h3>
+            <div class="social-icons">
+              <a id="social-instagram" href="https://instagram.com" target="_blank" rel="noopener">📸</a>
+              <a id="social-facebook" href="https://facebook.com" target="_blank" rel="noopener">📘</a>
+              <a id="social-youtube" href="https://youtube.com" target="_blank" rel="noopener">▶️</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PRODUCT DETAIL & BOOKING VIEW ================= -->
+  <div id="product-detail-view" class="hidden">
+    <div class="detail-header">
+      <button type="button" class="back-btn" onclick="closeProductDetail()">←</button>
+      <div class="logo" style="font-size: 16px;">PRODUCT & INSTALLATION BOOKING</div>
+    </div>
+    <div class="detail-main-layout">
+      <div class="gallery-container">
+        <div class="main-image"><img id="d-img" src="" alt="Product"></div>
+      </div>
+      <div class="product-info-side">
+        <div class="detail-brand" id="d-brand">BRAND</div>
+        <div class="detail-name" id="d-name">Product Name</div>
+        <div id="d-van-badge" style="font-size:12px;color:#555;margin-bottom:10px;font-weight:700;">VAN: 000000</div>
+        <div id="d-specs-tags" class="product-tags" style="margin-bottom:14px;"></div>
+
+        <div class="price-box">
+          <div class="price-row"><span>Software / Product Price:</span><span id="d-price">₹0</span></div>
+          <div class="price-row"><span>Selected Installation Charge:</span><span id="d-install">₹299</span></div>
+          <div class="price-row total"><span>Total Payable:</span><span id="d-total">₹0</span></div>
+        </div>
+
+        <div class="selector-title">CHOOSE INSTALLATION TYPE</div>
+        <div class="variant-grid">
+          <button type="button" class="variant-btn active" id="inst-btn-online" onclick="selectInstallType('online')">💻 Online Desk Installation (₹299)</button>
+          <button type="button" class="variant-btn" id="inst-btn-visit" onclick="selectInstallType('visit')">🏠 Expert Visit Installation (₹400)</button>
+        </div>
+
+        <button type="button" class="btn-add-cart" id="d-book-cta" onclick="openBookingModal()">BOOK NOW & PAY VIA UPI QR</button>
+
+        <div class="tabs-header">
+          <button type="button" class="tab-btn active" onclick="switchDetailTab('about', event)">About & Features</button>
+          <button type="button" class="tab-btn" onclick="switchDetailTab('details', event)">Specifications</button>
+        </div>
+        <div id="tab-about" class="tab-content active">
+          <p id="d-desc" style="margin-bottom: 12px;"></p>
+          <ul id="d-benefits" style="padding-left:18px;"></ul>
+        </div>
+        <div id="tab-details" class="tab-content">
+          <ul class="pd-list" id="d-extra-specs"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ADMIN PANEL ================= -->
+  <div id="admin-view" class="hidden">
+    <div class="admin-layout">
+      <div class="admin-sidebar">
+        <h2>ADMIN MASTER PANEL</h2>
+        <button type="button" class="admin-menu-btn active" onclick="switchAdminTab('orders', this)">🛒 Live Orders & Billing</button>
+        <button type="button" class="admin-menu-btn" onclick="switchAdminTab('invoices', this)">🧾 INVOICE (All Bills)</button>
+        <button type="button" class="admin-menu-btn" onclick="switchAdminTab('inventory', this)">📦 Inventory & 6-Digit VAN</button>
+        <button type="button" class="admin-menu-btn" onclick="switchAdminTab('agents', this)">👷 Agents (Create / Block)</button>
+        <button type="button" class="admin-menu-btn" onclick="switchAdminTab('layout', this)">🎨 Header, Menu & Note Bar</button>
+        <button type="button" class="admin-menu-btn" onclick="switchAdminTab('slides', this)">🖼️ Slides, Cards & Video</button>
+        <button type="button" class="admin-menu-btn" onclick="switchAdminTab('settings', this)">⚙️ Store Settings & Templates</button>
+        <button type="button" class="admin-menu-btn" onclick="switchAdminTab('firebase', this)">🔥 Firebase Live Sync & Backup</button>
+      </div>
+
+      <div class="admin-main">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.05);">
+          <div>
+            <strong id="admin-top-biz">Om Sai Enterprises — Admin Control</strong>
+            <div style="font-size:12px;color:#666;" id="cloud-sync-badge">Firebase Live Sync: Connecting...</div>
+          </div>
+          <button class="btn" type="button" onclick="logout()">← Back to Store / Logout</button>
+        </div>
+
+        <!-- 1. LIVE ORDERS & BILLING -->
+        <div id="admin-orders" class="admin-section">
+          <div class="card">
+            <h3>🛒 Live Customer Bookings & Payment Verification</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Order & Customer</th>
+                    <th>Product & Install</th>
+                    <th>Payment & Screenshot</th>
+                    <th>Assign Agent</th>
+                    <th>Billing & WhatsApp/Email</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-orders-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. INVOICE SECTION (ALL BILLS + MANUAL ENTRY) -->
+        <div id="admin-invoices" class="admin-section" style="display:none;">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+              <h3 style="margin:0;border:none;">🧾 INVOICE — All Generated Bills</h3>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <input type="text" id="invoice-search-input" placeholder="Search Bill No / Mobile / Name..." oninput="renderInvoicesTable()" style="padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;">
+                <button type="button" class="btn-green" onclick="openManualBillModal()">+ Create Direct Bill</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Bill No & Date</th>
+                    <th>Customer</th>
+                    <th>Product & VAN</th>
+                    <th>Total (Incl. GST)</th>
+                    <th>Renewal Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-invoices-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. INVENTORY & 6-DIGIT VAN -->
+        <div id="admin-inventory" class="admin-section" style="display:none;">
+          <div class="card">
+            <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+              <button type="button" class="btn-green" onclick="exportExcel()">⬇️ Export Inventory Excel</button>
+              <label class="btn-blue" style="cursor:pointer;">⬆️ Import Excel <input type="file" accept=".xlsx,.xls" onchange="importExcel(event)" style="display:none;"></label>
+            </div>
+            <h3 id="product-form-heading">Add / Edit Product (with 6-Digit VAN & Custom Fields)</h3>
+            <div class="form-grid">
+              <div class="form-group"><label>6-Digit VAN Number (Auto or Edit) *</label><input id="p-van" maxlength="6" placeholder="e.g. 482910"></div>
+              <div class="form-group"><label>Brand *</label><input id="p-brand" placeholder="e.g. McAfee, Quick Heal, Microsoft"></div>
+              <div class="form-group"><label>Product / Model Name *</label><input id="p-name" placeholder="e.g. Total Security / MS Office 2024"></div>
+              <div class="form-group"><label>Category (Left Menu Match) *</label><input id="p-category" placeholder="e.g. Antivirus, Mac/Apple, Android, Cloth, Kirana"></div>
+              <div class="form-group"><label>Brand Banner URL (For Brand Store)</label><input id="p-brand-banner" placeholder="https://..."></div>
+              <div class="form-group"><label>Product Price (₹) *</label><input id="p-price" type="number" min="0"></div>
+              <div class="form-group"><label>Stock Quantity (0 = Auto Out of Stock)</label><input id="p-stock" type="number" min="0" value="5"></div>
+              <div class="form-group">
+                <label>Badge Override (When Stock Empty/New)</label>
+                <select id="p-badge-mode">
+                  <option value="auto">Auto (In Stock / Out of Stock)</option>
+                  <option value="new">New Arrival</option>
+                  <option value="notify">Notify Me (Coming Soon)</option>
+                  <option value="out">Out of Stock</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Supported OS / Platform</label><input id="p-os" placeholder="Windows, Mac, Android, Mobile"></div>
+              <div class="form-group"><label>Package Validity (Years)</label><select id="p-years"><option value="1">1 Year</option><option value="2">2 Years</option><option value="3">3 Years</option><option value="0">Lifetime / N/A</option></select></div>
+              <div class="form-group"><label>Edition / Variety</label><input id="p-variety" placeholder="Essential, Pro, Total Security, Home & Student"></div>
+              <div class="form-group"><label>Product Image URL</label><input id="p-image" placeholder="https://..."></div>
+            </div>
+            <div style="margin-top:12px;padding:12px;background:#f9f9f9;border-radius:8px;border:1px solid #eee;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+                <strong style="font-size:13px;">Custom Details (Model, Devices, Additional Details)</strong>
+                <button type="button" class="btn-blue" onclick="addCustomAttrRow()">+ Add Custom Field</button>
+              </div>
+              <div id="custom-attrs-container"></div>
+            </div>
+            <div class="form-group" style="margin-top:10px;"><label>Description & Features</label><textarea id="p-desc" placeholder="Product features..."></textarea></div>
+            <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+              <button class="btn" type="button" onclick="saveProduct()" id="save-product-btn">Save Product</button>
+              <button class="btn-green" type="button" onclick="clearProductForm()">Clear / New VAN</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Inventory List</h3>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>VAN</th><th>Brand & Name</th><th>Category</th><th>OS / Plan / Variety</th><th>Price</th><th>Stock / Status</th><th>Actions</th></tr></thead>
+                <tbody id="admin-inventory-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. AGENTS MANAGEMENT -->
+        <div id="admin-agents" class="admin-section" style="display:none;">
+          <div class="card">
+            <h3>👷 Create / Register Installation Agent</h3>
+            <div class="form-grid">
+              <div class="form-group"><label>Agent Full Name *</label><input id="ag-name" placeholder="e.g. Rahul Sharma"></div>
+              <div class="form-group"><label>Agent WhatsApp Number *</label><input id="ag-phone" placeholder="e.g. 9876543210"></div>
+              <div class="form-group"><label>Agent Email / Username *</label><input id="ag-user" placeholder="e.g. rahul@domain.com or rahul01"></div>
+              <div class="form-group"><label>Login Password *</label><input id="ag-pass" placeholder="Min 6 chars for Firebase Auth"></div>
+            </div>
+            <button type="button" class="btn" style="margin-top:12px;" onclick="createAgent()">+ Save Agent</button>
+          </div>
+          <div class="card">
+            <h3>All Agents (Block / Unblock Access)</h3>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Name</th><th>WhatsApp</th><th>Email / Username</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="admin-agents-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. HEADER, LEFT MENU & NOTE TICKER CUSTOMIZATION -->
+        <div id="admin-layout" class="admin-section" style="display:none;">
+          <div class="card">
+            <h3>🎨 Header & Top Note Slideshow Editor</h3>
+            <div class="form-grid">
+              <div class="form-group"><label>Header Business Name</label><input id="lay-biz-name" placeholder="OM SAI ENTERPRISES"></div>
+              <div class="form-group">
+                <label>Show Search Bar in Header?</label>
+                <select id="lay-show-search"><option value="yes">Yes (Show)</option><option value="no">No (Hide)</option></select>
+              </div>
+              <div class="form-group"><label>Note Font Size (px)</label><input id="lay-note-size" type="number" min="11" max="28" value="14"></div>
+              <div class="form-group"><label>Note Background Color</label><input id="lay-note-bg" type="color" value="#fffae6"></div>
+              <div class="form-group"><label>Note Text Color</label><input id="lay-note-color" type="color" value="#111111"></div>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>Header Niche Note Slideshow Lines (Har line ek slide banegi)</label>
+              <textarea id="lay-note-lines" placeholder="Line 1&#10;Line 2"></textarea>
+            </div>
+            <button type="button" class="btn" style="margin-top:10px;" onclick="saveHeaderAndNote()">Save Header & Note Bar</button>
+          </div>
+
+          <div class="card">
+            <h3>📋 Left Menu Manager (Add / Remove Categories)</h3>
+            <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+              <input id="new-menu-label" placeholder="Menu Name (e.g. Antivirus, Cloth, Kirana, Toys)" style="flex:1;min-width:180px;padding:9px;border:1px solid #ccc;border-radius:6px;">
+              <select id="new-menu-type" style="padding:9px;border:1px solid #ccc;border-radius:6px;">
+                <option value="category">Filter by Category</option>
+                <option value="all">All Products</option>
+                <option value="brands">All Brands</option>
+                <option value="history">Customer Booking & Payment History</option>
+                <option value="bill">Bill Download Popup</option>
+                <option value="whatsapp_support">WhatsApp Support Quick Questions</option>
+              </select>
+              <button type="button" class="btn-green" onclick="addLeftMenuItem()">+ Add to Left Menu</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Menu Label</th><th>Action Type</th><th>Remove</th></tr></thead>
+                <tbody id="admin-left-menu-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. SLIDES, BANNERS, CARDS, MINI, NOTES, WARNINGS & VIDEO -->
+        <div id="admin-slides" class="admin-section" style="display:none;">
+          <div class="card">
+            <h3>🖼️ Add Slides, Banners, Cards, Mini Images, Notes, Warnings & Video</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Display Type *</label>
+                <select id="media-type" onchange="toggleMediaFields()">
+                  <option value="banner">Hero Banner Slide</option>
+                  <option value="card">Promo Card</option>
+                  <option value="mini">Mini Round Image</option>
+                  <option value="note">Highlight Note Box</option>
+                  <option value="warning">Warning Alert Box</option>
+                  <option value="video">Video Player (YouTube / MP4 Link)</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Title / Note / Warning Text *</label><input id="media-title" placeholder="Enter heading or note text"></div>
+              <div class="form-group" id="media-urls-wrap" style="grid-column:1/-1;">
+                <label>Image URL(s) — Multiple URLs ke liye har line mein ek URL daalein (Exact size auto-detect hoga)</label>
+                <textarea id="media-urls" placeholder="https://example.com/banner1.jpg&#10;https://example.com/banner2.jpg" oninput="detectMediaImageSizes()"></textarea>
+                <div id="detected-sizes-box" style="font-size:12px;color:#0050b3;margin-top:4px;font-weight:600;"></div>
+              </div>
+              <div class="form-group" id="media-video-wrap" style="display:none;grid-column:1/-1;">
+                <label>Video Link (YouTube URL ya direct .mp4 link)</label>
+                <input id="media-video-url" placeholder="https://www.youtube.com/watch?v=...">
+              </div>
+              <div class="form-group"><label>Click Filter Category / Brand (Optional)</label><input id="media-target" placeholder="e.g. Antivirus or McAfee"></div>
+            </div>
+            <button type="button" class="btn" style="margin-top:10px;" onclick="saveMediaItem()">+ Add Item to Storefront</button>
+          </div>
+          <div class="card">
+            <h3>Active Media, Notes, Warnings & Videos</h3>
+            <div id="admin-media-list"></div>
+          </div>
+        </div>
+
+        <!-- 7. STORE SETTINGS (SHOW/HIDE TOGGLES, UPI QR, TEMPLATES, TERMS) -->
+        <div id="admin-settings" class="admin-section" style="display:none;">
+          <div class="card">
+            <h3>⚙️ Store Settings (Show / Hide Controls on Website & Bills)</h3>
+            <div class="form-grid" id="store-settings-grid"></div>
+            <div class="form-grid" style="margin-top:12px;">
+              <div class="form-group"><label>UPI ID (For Auto QR Generator) *</label><input id="set-upi-id" placeholder="yourname@upi"></div>
+              <div class="form-group"><label>UPI Payee / Account Name (QR par dikhega) *</label><input id="set-upi-name" placeholder="Om Sai Enterprises"></div>
+              <div class="form-group"><label>Online Desk Installation Charge (₹)</label><input id="set-install-online" type="number" value="299"></div>
+              <div class="form-group"><label>Expert Visit Installation Charge (₹)</label><input id="set-install-visit" type="number" value="400"></div>
+              <div class="form-group"><label>Default GST % on Bills</label><input id="set-gst-rate" type="number" value="18"></div>
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+              <label>Terms & Conditions (Printed on every Bill)</label>
+              <textarea id="set-terms" rows="3"></textarea>
+            </div>
+            <button type="button" class="btn" style="margin-top:12px;" onclick="saveStoreSettings()">Save Store Settings</button>
+          </div>
+
+          <div class="card">
+            <h3>💬 Pre-Set WhatsApp & Ready-Made Email Templates</h3>
+            <p style="font-size:12px;color:#666;margin-bottom:10px;">Placeholders use karein: <code>{name}</code>, <code>{billNo}</code>, <code>{product}</code>, <code>{van}</code>, <code>{key}</code>, <code>{total}</code>, <code>{renewal}</code>, <code>{txn}</code>, <code>{note}</code></p>
+            <div class="form-group">
+              <label>WhatsApp Bill & Key Message Template</label>
+              <textarea id="tpl-wa-bill" rows="4"></textarea>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>Email Bill Template</label>
+              <textarea id="tpl-email-bill" rows="4"></textarea>
+            </div>
+            <button type="button" class="btn" style="margin-top:10px;" onclick="saveTemplates()">Save Templates</button>
+          </div>
+        </div>
+
+        <!-- 8. FIREBASE REAL-TIME SYNC & BACKUP -->
+        <div id="admin-firebase" class="admin-section" style="display:none;">
+          <div class="card">
+            <h3>🔥 Firebase Live Sync Status (shop1-7022a)</h3>
+            <p style="font-size:12px;color:#555;margin-bottom:10px;">Firebase config hardcoded hai aur Firestore collections (<code>store_public</code>, <code>orders</code>, <code>invoices</code>, <code>agents</code>) real-time sync hoti hain.</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button type="button" class="btn-green" onclick="pushCatalogAndConfigToCloud(true)">⬆️ Publish Catalog & Settings to Cloud</button>
+            </div>
+            <p id="firebase-status" style="margin-top:10px;font-weight:700;font-size:13px;"></p>
+          </div>
+
+          <div class="card">
+            <h3>💾 Full Store Backup & Restore (Google Drive / Local JSON)</h3>
+            <p style="font-size:12px;color:#555;margin-bottom:10px;">Apne poore store data ki backup file download karke Google Drive mein save kar sakte hain.</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button type="button" class="btn-blue" onclick="downloadFullBackup()">⬇️ Download Full Backup (.json)</button>
+              <label class="btn-green" style="cursor:pointer;">⬆️ Restore Backup (.json) <input type="file" accept=".json" onchange="restoreFullBackup(event)" style="display:none;"></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= AGENT PORTAL ================= -->
+  <div id="agent-view" class="hidden">
+    <div class="admin-layout">
+      <div class="admin-sidebar">
+        <h2>AGENT PORTAL</h2>
+        <button type="button" class="admin-menu-btn active">📋 My Assigned Jobs</button>
+      </div>
+      <div class="admin-main">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#fff;border-radius:10px;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+          <div>
+            <strong id="agent-welcome-title">Welcome, Agent</strong>
+            <div style="font-size:12px;color:#666;">Complete installation, upload screenshot proof & mark done</div>
+          </div>
+          <button type="button" class="btn" onclick="logout()">← Logout</button>
+        </div>
+        <div class="card">
+          <h3>Assigned Installations</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Customer Details</th>
+                  <th>Product & Key</th>
+                  <th>Install Mode</th>
+                  <th>Status</th>
+                  <th>Upload Proof & Complete</th>
+                </tr>
+              </thead>
+              <tbody id="agent-tasks-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CUSTOMER BOOKING + UPI QR MODAL ================= -->
+  <div class="modal" id="booking-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="booking-modal-title">Book Software & Installation</h3>
+        <button type="button" class="close-btn" onclick="closeBookingModal()">×</button>
+      </div>
+      <form id="booking-step-1" onsubmit="proceedToUpiQr(event)">
+        <div class="form-group" style="margin-bottom:10px;"><label>Customer Full Name *</label><input type="text" id="book-name" required placeholder="Enter your name"></div>
+        <div class="form-group" style="margin-bottom:10px;"><label>WhatsApp Number *</label><input type="tel" id="book-phone" required placeholder="10-digit WhatsApp number"></div>
+        <div class="form-group" style="margin-bottom:10px;"><label>Email ID *</label><input type="email" id="book-email" required placeholder="you@example.com"></div>
+        <div class="form-group" style="margin-bottom:10px;"><label>Full Address *</label><textarea id="book-address" required placeholder="House/Flat, Area, City, Pincode"></textarea></div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>Installation Choice *</label>
+          <select id="book-install-mode" onchange="updateBookingModalTotal()">
+            <option value="online">Online Desk Installation (₹299)</option>
+            <option value="visit">Expert Visit Installation (₹400)</option>
+          </select>
+        </div>
+        <div style="background:#f5f5f5;padding:12px;border-radius:8px;margin-bottom:14px;font-weight:800;display:flex;justify-content:space-between;">
+          <span>Total Payable:</span>
+          <span id="modal-total-amount">₹0</span>
+        </div>
+        <button type="submit" class="btn" style="width:100%;padding:13px;">Book & Generate UPI QR</button>
+      </form>
+
+      <div id="booking-step-2" class="hidden" style="text-align:center;">
+        <div style="background:#f6ffed;border:1px solid #b7eb8f;padding:8px 10px;border-radius:8px;margin-bottom:10px;font-size:12px;color:#135200;font-weight:700;">
+          ✅ Booking Live Listed (<span id="live-order-badge-id">ORD-000000</span>) — Payment pending ya done dono track honge
+        </div>
+        <div style="background:#e6f7ff;border:1px solid #91d5ff;padding:10px;border-radius:8px;margin-bottom:12px;">
+          <div style="font-size:12px;color:#0050b3;font-weight:700;">SCAN & PAY VIA ANY UPI APP</div>
+          <div style="font-size:16px;font-weight:900;margin-top:2px;" id="qr-payee-name">Om Sai Enterprises</div>
+          <div style="font-size:12px;color:#333;" id="qr-upi-id">omsai@upi</div>
+        </div>
+        <div id="upi-qrcode-box" style="display:flex;justify-content:center;margin:10px auto;"></div>
+        <div style="font-size:18px;font-weight:900;margin-bottom:10px;">Amount: <span id="qr-pay-amount">₹0</span></div>
+
+        <div style="text-align:left;margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:800;color:#444;text-transform:uppercase;margin-bottom:6px;text-align:center;">Direct UPI App Payment Options</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button type="button" class="btn-blue" style="padding:10px;" onclick="launchDirectUpiApp('gpay')">💳 GPay</button>
+            <button type="button" class="btn-blue" style="background:#002970;padding:10px;" onclick="launchDirectUpiApp('paytm')">💰 Paytm</button>
+            <button type="button" class="btn-blue" style="background:#5f259f;padding:10px;" onclick="launchDirectUpiApp('phonepe')">📱 PhonePe</button>
+            <button type="button" class="btn-blue" style="background:#0066b2;padding:10px;" onclick="launchDirectUpiApp('bhim')">🏦 BHIM UPI</button>
+          </div>
+          <div id="upi-app-feedback" style="font-size:11px;color:#555;margin-top:6px;text-align:center;"></div>
+        </div>
+
+        <div style="background:#fafafa;border:1px solid #e5e5e5;padding:12px;border-radius:8px;text-align:left;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:800;color:#111;margin-bottom:8px;">Already Payment Kiya Hai?</div>
+          <button type="button" class="btn-wa" style="width:100%;justify-content:center;padding:11px;margin-bottom:10px;font-size:13px;" onclick="shareAlreadyPaidOnWhatsApp()">📲 Already Paid — Share Details & Screenshot on WhatsApp</button>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Ya Yahan Screenshot Upload Karein</label>
+            <input type="file" id="book-screenshot" accept="image/*" onchange="previewBookingScreenshot(event)">
+            <img id="book-ss-preview" class="hidden" style="width:100%;max-height:140px;object-fit:contain;margin-top:8px;border:1px solid #ddd;border-radius:6px;">
+          </div>
+          <div class="form-group" style="margin-bottom:10px;">
+            <label>UPI Transaction ID / Ref No</label>
+            <input type="text" id="book-txn-id" placeholder="e.g. 432198765432">
+          </div>
+          <button type="button" class="btn-green" style="width:100%;padding:12px;" onclick="submitBookingWithScreenshot()">Save Payment Proof & Update Live Status</button>
+        </div>
+
+        <button type="button" class="btn" style="background:#555;width:100%;padding:10px;font-size:12px;" onclick="finishBookingWithoutPayment()">Baad Mein Payment Karunga (Keep Listed as Unpaid)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ADMIN BILL GENERATOR MODAL ================= -->
+  <div class="modal" id="bill-create-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🧾 Generate Customer Bill & Key</h3>
+        <button type="button" class="close-btn" onclick="closeModal('bill-create-modal')">×</button>
+      </div>
+      <form onsubmit="finalizeAndSaveBill(event)">
+        <input type="hidden" id="bill-order-id">
+        <div class="form-grid">
+          <div class="form-group"><label>Customer Name *</label><input id="b-cust-name" required></div>
+          <div class="form-group"><label>WhatsApp Mobile *</label><input id="b-cust-phone" required></div>
+          <div class="form-group"><label>Email ID</label><input id="b-cust-email"></div>
+          <div class="form-group"><label>Address</label><input id="b-cust-address"></div>
+          <div class="form-group"><label>Product Name *</label><input id="b-prod-name" required></div>
+          <div class="form-group"><label>6-Digit VAN Number *</label><input id="b-van" maxlength="6" required></div>
+          <div class="form-group"><label>Quantity *</label><input id="b-qty" type="number" min="1" value="1" required></div>
+          <div class="form-group"><label>Total Rate Incl. Install (₹) *</label><input id="b-rate" type="number" min="0" required></div>
+          <div class="form-group"><label>GST %</label><input id="b-gst" type="number" min="0" value="18"></div>
+          <div class="form-group"><label>Plan Validity (Years)</label><select id="b-years"><option value="1">1 Year</option><option value="2">2 Years</option><option value="3">3 Years</option></select></div>
+          <div class="form-group"><label>Product License Key *</label><input id="b-key" required placeholder="XXXX-XXXX-XXXX-XXXX"></div>
+          <div class="form-group"><label>Transaction ID *</label><input id="b-txn" required placeholder="UPI Ref / Txn ID"></div>
+        </div>
+        <div class="form-group" style="margin-top:10px;"><label>Customer Note (Bill par dikhega)</label><textarea id="b-note" placeholder="e.g. 1 Year Free Remote Support Included"></textarea></div>
+        <button type="submit" class="btn" style="width:100%;margin-top:12px;padding:12px;">Confirm Payment & Generate Bill</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= BILL DOWNLOAD & PRINTABLE INVOICE MODAL ================= -->
+  <div class="modal" id="bill-download-modal">
+    <div class="modal-content" style="max-width:680px;">
+      <div class="modal-header no-print">
+        <h3>📄 Download / View Tax Invoice</h3>
+        <button type="button" class="close-btn" onclick="closeModal('bill-download-modal')">×</button>
+      </div>
+      <div class="no-print" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <input id="dl-bill-query" placeholder="Enter Bill Number (e.g. INV-1001) & Mobile Number" style="flex:1;min-width:200px;padding:10px;border:1px solid #ccc;border-radius:6px;">
+        <input id="dl-bill-mobile" placeholder="Registered Mobile Number" style="flex:1;min-width:170px;padding:10px;border:1px solid #ccc;border-radius:6px;">
+        <button type="button" class="btn" onclick="searchCustomerBill()">Find Bill</button>
+      </div>
+      <div id="bill-search-results" class="no-print" style="margin-bottom:12px;"></div>
+      <div id="printable-bill-area"></div>
+      <div id="bill-action-buttons" class="no-print hidden" style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button type="button" class="btn" onclick="window.print()">🖨️ Download / Print PDF</button>
+        <button type="button" class="btn-wa" id="bill-send-wa-btn">📲 Send Bill on WhatsApp</button>
+        <button type="button" class="btn-blue" id="bill-send-email-btn">✉️ Send Bill on Email</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CUSTOMER BOOKING & PAYMENT HISTORY MODAL ================= -->
+  <div class="modal" id="customer-history-modal">
+    <div class="modal-content" style="max-width:650px;">
+      <div class="modal-header">
+        <h3>📜 My Booking & Payment History</h3>
+        <button type="button" class="close-btn" onclick="closeModal('customer-history-modal')">×</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <input id="hist-order-filter" placeholder="Order ID (e.g. ORD-123456)" style="flex:1;min-width:150px;padding:9px;border:1px solid #ccc;border-radius:6px;font-size:13px;">
+        <input id="hist-phone-filter" placeholder="Mobile Number (for verification)" style="flex:1;min-width:170px;padding:9px;border:1px solid #ccc;border-radius:6px;font-size:13px;">
+        <button type="button" class="btn" onclick="renderCustomerHistoryList()">Search</button>
+      </div>
+      <div id="customer-history-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+    </div>
+  </div>
+
+  <!-- ================= WHATSAPP SUPPORT & QUICK ENQUIRY MODAL ================= -->
+  <div class="modal" id="wa-support-modal">
+    <div class="modal-content" style="max-width:560px;">
+      <div class="modal-header">
+        <h3>💬 WhatsApp Instant Support & Enquiry</h3>
+        <button type="button" class="close-btn" onclick="closeModal('wa-support-modal')">×</button>
+      </div>
+      <p style="font-size:13px;color:#555;margin-bottom:12px;">Apna sawal ya enquiry topic select karein — message professionally draft hokar seedha Admin WhatsApp par khulega:</p>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label>Aapka Naam (Optional)</label>
+          <input type="text" id="wasup-name" placeholder="Enter your name">
+        </div>
+        <div class="form-group">
+          <label>Device / OS (Optional)</label>
+          <select id="wasup-device">
+            <option value="">Select Device</option>
+            <option value="Windows PC / Laptop">Windows PC / Laptop</option>
+            <option value="Mac / Apple">Mac / Apple</option>
+            <option value="Android Mobile">Android Mobile</option>
+            <option value="Multi-Device (PC + Mobile)">Multi-Device (PC + Mobile)</option>
+          </select>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:800;color:#111;margin-bottom:8px;text-transform:uppercase;">Select Enquiry Topic (10 Quick Options):</div>
+      <div id="wa-support-questions-list" style="display:flex;flex-direction:column;gap:8px;max-height:310px;overflow-y:auto;padding-right:4px;margin-bottom:12px;"></div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>Extra Details / Custom Message (Optional)</label>
+        <textarea id="wasup-extra" rows="2" placeholder="Yahan apna koi aur sawal ya details likh sakte hain..."></textarea>
+      </div>
+      <button type="button" class="btn-wa" style="width:100%;justify-content:center;padding:12px;font-size:14px;" onclick="sendSelectedWaSupport()">📲 Send Direct Message on Admin WhatsApp</button>
+    </div>
+  </div>
+
+  <!-- ================= SCREENSHOT LIGHTBOX MODAL ================= -->
+  <div class="modal" id="screenshot-viewer-modal">
+    <div class="modal-content" style="max-width:560px;text-align:center;">
+      <div class="modal-header">
+        <h3 id="ss-viewer-title">Screenshot Preview</h3>
+        <button type="button" class="close-btn" onclick="closeModal('screenshot-viewer-modal')">×</button>
+      </div>
+      <img id="ss-viewer-img" src="" alt="Screenshot" style="max-width:100%;max-height:68dvh;object-fit:contain;border-radius:8px;border:1px solid #ddd;">
+    </div>
+  </div>
+
+  <!-- ================= INFO MODAL (ABOUT / TERMS) ================= -->
+  <div class="modal" id="info-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="info-modal-title">Information</h3>
+        <button type="button" class="close-btn" onclick="closeModal('info-modal')">×</button>
+      </div>
+      <div id="info-modal-body" style="font-size:14px;color:#333;line-height:1.65;white-space:pre-line;"></div>
+    </div>
+  </div>
+
+  <script>
+    // ================= SAFE INLINE SVG PLACEHOLDERS =================
+    function svgPlaceholder(label = 'Om Sai', bg = '#1e293b', fg = '#ffffff') {
+      const safe = String(label).slice(0, 22).replace(/[<>&"]/g, '');
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300" viewBox="0 0 600 300"><rect width="600" height="300" fill="${bg}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="${fg}" font-family="Arial,sans-serif" font-size="26" font-weight="bold">${safe}</text></svg>`;
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function escapeJsStr(str) {
+      return String(str ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
+
+    // ================= HARDCODED FIREBASE CONFIG (shop1-7022a) =================
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCVzzR6ZOQe_1M5rUil0rXDBk8vsjrd2H4",
+      authDomain: "shop1-7022a.firebaseapp.com",
+      databaseURL: "https://shop1-7022a-default-rtdb.firebaseio.com",
+      projectId: "shop1-7022a",
+      storageBucket: "shop1-7022a.firebasestorage.app",
+      messagingSenderId: "315539430726",
+      appId: "1:315539430726:web:7fc2e5e4dae5ec2c839947",
+      measurementId: "G-6X79YR66Z0"
+    };
+
+    let db = null;
+    let auth = null;
+    let firebaseReady = false;
+    let currentAuthRole = null;
+
+    const STORE_KEY = 'omsai_erp_v5';
+    const MY_ORDERS_KEY = 'omsai_my_order_ids_v5';
+
+    const defaultData = {
+      layout: {
+        bizName: 'OM SAI ENTERPRISES',
+        showSearch: 'yes',
+        noteSize: 14,
+        noteBg: '#fffae6',
+        noteColor: '#111111',
+        noteLines: [
+          '⚡ Genuine Antivirus & MS Office Keys • Instant Online & Doorstep Installation!',
+          '🛡️ 100% Original License with 6-Digit VAN Verification & PDF GST Bill'
+        ],
+        leftMenu: [
+          { id: 'm1', label: 'NEW ARRIVALS', type: 'category', value: 'New Arrivals' },
+          { id: 'm2', label: 'ANTIVIRUS', type: 'category', value: 'Antivirus' },
+          { id: 'm3', label: 'MAC / APPLE', type: 'category', value: 'Mac/Apple' },
+          { id: 'm4', label: 'ANDROID', type: 'category', value: 'Android' },
+          { id: 'm5', label: 'BRANDS', type: 'brands', value: '' },
+          { id: 'm6', label: '📜 HISTORY / MY BOOKINGS', type: 'history', value: '' },
+          { id: 'm7', label: '📄 BILL DOWNLOAD', type: 'bill', value: '' },
+          { id: 'm8', label: '💬 WHATSAPP SUPPORT', type: 'whatsapp_support', value: '' }
+        ]
+      },
+      settings: {
+        fields: {
+          businessName: { label: 'Business Name', value: 'Om Sai Enterprises', show: true },
+          location: { label: 'Store Location', value: 'Navi Mumbai, Maharashtra, India', show: true },
+          gst: { label: 'GST Number', value: '27XXXXX1234X1Z5', show: true },
+          udyam: { label: 'Udyam Certificate', value: 'UDYAM-MH-19-0012345', show: true },
+          email: { label: 'Email ID', value: 'support@omsaienterprises.in', show: true },
+          website: { label: 'Website', value: 'www.omsaienterprises.in', show: true },
+          about: { label: 'About Business', value: 'Authorized Software, Antivirus, MS Office & Multi-Category Store.', show: true },
+          altNumber: { label: 'Alternative / WhatsApp Number', value: '+91 9653435223', show: true },
+          tollFree: { label: 'Toll Free Number', value: '1800-123-4567', show: true }
+        },
+        upiId: 'omsaienterprises@upi',
+        upiName: 'Om Sai Enterprises',
+        installOnline: 299,
+        installVisit: 400,
+        gstRate: 18,
+        terms: '1. Genuine digital license key once delivered/activated is non-refundable.\n2. Renewal reminder date is printed above for uninterrupted protection.\n3. Free remote support valid during active subscription period.',
+        waTemplate: 'Hello *{name}*,\nThank you for shopping with *Om Sai Enterprises*!\n\n*Bill No:* {billNo}\n*Product:* {product} (VAN: {van})\n*License Key:* `{key}`\n*Transaction ID:* {txn}\n*Total Paid:* ₹{total}\n*Renewal Date:* *{renewal}*\n*Note:* {note}\n\nDownload your PDF Bill anytime on our website!',
+        emailTemplate: 'Dear {name},\n\nThank you for your purchase. Please find your license & invoice details below:\n\nBill Number: {billNo}\nProduct: {product} (VAN: {van})\nActivation Key: {key}\nTransaction ID: {txn}\nTotal Paid: Rs. {total}\nRenewal Date: {renewal}\nNote: {note}\n\nRegards,\nOm Sai Enterprises'
+      },
+      products: [
+        {
+          id: 101, van: '482910', brand: 'McAfee', name: 'McAfee Total Protection 1 Device',
+          category: 'Antivirus', brandBanner: svgPlaceholder('McAfee Official Store', '#c01818', '#ffffff'),
+          price: 699, stock: 15, badgeMode: 'auto', os: 'Windows, Mac, Android', years: '1', variety: 'Total Protection',
+          image: svgPlaceholder('McAfee Security', '#991b1b', '#ffffff'),
+          desc: 'Complete antivirus, web protection, firewall and identity monitoring for Windows, Mac & Mobile.',
+          customAttrs: [{ key: 'Model', val: 'MTP-2026-1U' }, { key: 'Support Device', val: '1 PC / Mac / Android' }]
+        },
+        {
+          id: 102, van: '739104', brand: 'Microsoft', name: 'MS Office Home & Student 2024',
+          category: 'Mac/Apple', brandBanner: svgPlaceholder('Microsoft Office Store', '#1d4ed8', '#ffffff'),
+          price: 4499, stock: 8, badgeMode: 'new', os: 'Windows & Mac', years: '3', variety: 'Pro / Home Edition',
+          image: svgPlaceholder('MS Office 2024', '#1e40af', '#ffffff'),
+          desc: 'Original Word, Excel, PowerPoint with official Microsoft account binding.',
+          customAttrs: [{ key: 'Model', val: 'OFF-2024-ESD' }, { key: 'Support Device', val: 'Windows 11 / macOS' }]
+        },
+        {
+          id: 103, van: '591028', brand: 'Quick Heal', name: 'Quick Heal Mobile Security Pro',
+          category: 'Android', brandBanner: svgPlaceholder('Quick Heal Store', '#0f766e', '#ffffff'),
+          price: 399, stock: 0, badgeMode: 'notify', os: 'Android', years: '1', variety: 'Pro',
+          image: svgPlaceholder('Quick Heal Pro', '#115e59', '#ffffff'),
+          desc: 'Anti-theft, safe banking and malware shield for Android smartphones.',
+          customAttrs: [{ key: 'Model', val: 'QH-MOB-1Y' }, { key: 'Support Device', val: 'Android 10+' }]
+        }
+      ],
+      media: [
+        { id: 'md1', type: 'banner', title: 'Genuine Antivirus & MS Office — Instant Setup', urls: [svgPlaceholder('Om Sai Enterprises • Genuine Software & Setup', '#0f172a', '#38bdf8')], videoUrl: '', target: 'Antivirus' },
+        { id: 'md2', type: 'note', title: '📢 Special Offer: Book Online Desk Installation @ ₹299 & Get Free PC Tune-Up!', urls: [], videoUrl: '', target: '' }
+      ],
+      agents: [],
+      orders: [],
+      invoices: []
+    };
+
+    let state = loadState();
+    let currentProduct = null;
+    let selectedInstallType = 'online';
+    let bookingScreenshotData = '';
+    let editingProductId = null;
+    let activeSlideIdx = 0;
+    let activeNoteIdx = 0;
+    let activeDraftOrderId = '';
+    let activeUpiPayUrl = '';
+    let pendingBannerDismissed = false;
+
+    function loadState() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+        if (raw && raw.settings && raw.layout) {
+          return {
+            ...JSON.parse(JSON.stringify(defaultData)),
+            ...raw,
+            layout: { ...defaultData.layout, ...(raw.layout || {}) },
+            settings: {
+              ...defaultData.settings,
+              ...(raw.settings || {}),
+              fields: { ...defaultData.settings.fields, ...((raw.settings && raw.settings.fields) || {}) }
+            }
+          };
+        }
+      } catch (e) {}
+      return JSON.parse(JSON.stringify(defaultData));
+    }
+
+    function saveLocalState() {
+      try {
+        localStorage.setItem(STORE_KEY, JSON.stringify({
+          layout: state.layout,
+          settings: state.settings,
+          products: state.products,
+          media: state.media,
+          agents: state.agents,
+          orders: state.orders,
+          invoices: state.invoices
+        }));
+      } catch (e) {
+        console.warn('LocalStorage quota warning:', e);
+      }
+    }
+
+    function initFirebase() {
+      if (typeof firebase === 'undefined') {
+        setSyncBadge('Firebase SDK unavailable — using local browser storage', false);
+        return;
+      }
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(FIREBASE_CONFIG);
+        }
+        db = firebase.firestore();
+        auth = firebase.auth();
+        firebaseReady = true;
+        setSyncBadge('Firebase Firestore Connected (shop1-7022a)', true);
+        startRealtimeListeners();
+
+        auth.onAuthStateChanged((user) => {
+          currentAuthRole = user ? 'admin' : null;
+        });
+      } catch (e) {
+        firebaseReady = false;
+        setSyncBadge('Firebase Init Error: ' + e.message, false);
+      }
+    }
+
+    function setSyncBadge(msg, ok) {
+      const b = document.getElementById('cloud-sync-badge');
+      const f = document.getElementById('firebase-status');
+      if (b) { b.innerText = msg; b.style.color = ok ? '#16803c' : '#b42318'; }
+      if (f) { f.innerText = msg; f.style.color = ok ? '#16803c' : '#b42318'; }
+    }
+
+    function startRealtimeListeners() {
+      if (!firebaseReady || !db) return;
+
+      db.collection('store_public').doc('config').onSnapshot((doc) => {
+        if (doc.exists) {
+          const d = doc.data();
+          if (d.layout) state.layout = { ...state.layout, ...d.layout };
+          if (d.settings) {
+            state.settings = {
+              ...state.settings,
+              ...d.settings,
+              fields: { ...state.settings.fields, ...(d.settings.fields || {}) }
+            };
+          }
+          saveLocalState();
+          renderStorefront();
+          if (!document.getElementById('admin-view').classList.contains('hidden')) renderAllAdmin();
+        }
+      }, (err) => console.warn('Public config snapshot:', err));
+
+      db.collection('store_public').doc('catalog').onSnapshot((doc) => {
+        if (doc.exists && Array.isArray(doc.data().items)) {
+          state.products = doc.data().items;
+          saveLocalState();
+          renderStorefront();
+          if (!document.getElementById('admin-view').classList.contains('hidden')) renderInventoryTable();
+        }
+      }, (err) => console.warn('Catalog snapshot:', err));
+
+      db.collection('store_public').doc('media').onSnapshot((doc) => {
+        if (doc.exists && Array.isArray(doc.data().items)) {
+          state.media = doc.data().items;
+          saveLocalState();
+          renderSlidesOnly();
+          renderPromoBlocksOnce();
+          if (!document.getElementById('admin-view').classList.contains('hidden')) renderMediaAdminList();
+        }
+      }, (err) => console.warn('Media snapshot:', err));
+
+      db.collection('orders').orderBy('createdAtMs', 'desc').limit(100).onSnapshot((snap) => {
+        const list = [];
+        snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+        state.orders = list;
+        saveLocalState();
+        updatePendingPaymentBanner();
+        if (!document.getElementById('admin-view').classList.contains('hidden')) renderLiveOrdersTable();
+        if (!document.getElementById('agent-view').classList.contains('hidden')) renderAgentPortal();
+        if (document.getElementById('customer-history-modal').classList.contains('active')) renderCustomerHistoryList();
+      }, (err) => console.warn('Orders snapshot:', err));
+
+      db.collection('invoices').orderBy('createdAtMs', 'desc').limit(200).onSnapshot((snap) => {
+        const list = [];
+        snap.forEach(doc => list.push({ docId: doc.id, ...doc.data() }));
+        state.invoices = list;
+        saveLocalState();
+        if (!document.getElementById('admin-view').classList.contains('hidden')) renderInvoicesTable();
+      }, (err) => console.warn('Invoices snapshot:', err));
+
+      db.collection('agents').onSnapshot((snap) => {
+        const list = [];
+        snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+        state.agents = list;
+        saveLocalState();
+        if (!document.getElementById('admin-view').classList.contains('hidden')) {
+          renderAgentsTable();
+          renderLiveOrdersTable();
+        }
+      }, (err) => console.warn('Agents snapshot:', err));
+    }
+
+    async function pushCatalogAndConfigToCloud(showMsg = false) {
+      saveLocalState();
+      if (!firebaseReady || !db) {
+        if (showMsg) alert('Saved locally in browser.');
+        return;
+      }
+      try {
+        await Promise.all([
+          db.collection('store_public').doc('config').set({
+            layout: state.layout,
+            settings: state.settings,
+            updatedAt: new Date().toISOString()
+          }),
+          db.collection('store_public').doc('catalog').set({
+            items: state.products,
+            updatedAt: new Date().toISOString()
+          }),
+          db.collection('store_public').doc('media').set({
+            items: state.media,
+            updatedAt: new Date().toISOString()
+          })
+        ]);
+        if (showMsg) alert('Catalog, Media & Store Settings synced to Firebase Cloud!');
+      } catch (e) {
+        if (showMsg) alert('Cloud sync error (check Firestore rules/auth): ' + e.message);
+      }
+    }
+
+    async function saveOrderDoc(order) {
+      saveLocalState();
+      if (firebaseReady && db) {
+        try {
+          const { id, ...rest } = order;
+          await db.collection('orders').doc(id).set({
+            ...rest,
+            createdAtMs: rest.createdAtMs || Date.now()
+          }, { merge: true });
+        } catch (e) {
+          console.warn('Order doc save error:', e);
+        }
+      }
+    }
+
+    async function saveInvoiceDoc(inv) {
+      saveLocalState();
+      if (firebaseReady && db) {
+        try {
+          await db.collection('invoices').doc(inv.billNo).set({
+            ...inv,
+            createdAtMs: inv.createdAtMs || Date.now()
+          }, { merge: true });
+        } catch (e) {
+          console.warn('Invoice doc save error:', e);
+        }
+      }
+    }
+
+    function compressScreenshotToCompactDataUrl(file, maxWidth = 520, quality = 0.55) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width;
+            let h = img.height;
+            if (w > maxWidth) {
+              h = Math.round((h * maxWidth) / w);
+              w = maxWidth;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.onerror = () => resolve(String(reader.result));
+          img.src = String(reader.result);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function openScreenshotModal(dataUrl, title) {
+      if (!dataUrl) return;
+      document.getElementById('ss-viewer-title').innerText = title || 'Screenshot Preview';
+      document.getElementById('ss-viewer-img').src = dataUrl;
+      document.getElementById('screenshot-viewer-modal').classList.add('active');
+    }
+
+    function openRoleLogin(role) {
+      document.getElementById('login-role').value = role || 'admin';
+      document.getElementById('login-user').value = '';
+      document.getElementById('login-pass').value = '';
+      toggleLoginModeHint();
+      document.getElementById('login-screen').classList.remove('hidden');
+    }
+    function closeRoleLogin() { document.getElementById('login-screen').classList.add('hidden'); }
+    function toggleLoginModeHint() {
+      const role = document.getElementById('login-role').value;
+      const u = document.getElementById('login-user');
+      const hint = document.getElementById('login-mode-hint');
+      if (role === 'admin') {
+        u.placeholder = 'Admin Email (Firebase Auth)';
+        hint.innerText = 'Firebase Auth: Admin Email & Password se login karein.';
+      } else {
+        u.placeholder = 'Agent Email / Username';
+        hint.innerText = 'Agent Portal: Admin se assigned Email/Username & Password daalein.';
+      }
+    }
+
+    async function handleLogin() {
+      const role = document.getElementById('login-role').value;
+      const u = document.getElementById('login-user').value.trim();
+      const p = document.getElementById('login-pass').value;
+      if (!u || !p) { alert('Email/Username aur Password bharna zaroori hai.'); return; }
+
+      if (role === 'admin') {
+        if (!firebaseReady || !auth) {
+          alert('Firebase Auth ready nahi hai. Internet/Firebase config check karein.');
+          return;
+        }
+        try {
+          await auth.signInWithEmailAndPassword(u, p);
+          currentAuthRole = 'admin';
+          closeRoleLogin();
+          switchMainView('admin-view');
+          renderAllAdmin();
+        } catch (err) {
+          alert('Admin Auth Failed: ' + err.message);
+        }
+      } else {
+        const ag = state.agents.find(a =>
+          (a.username || '').toLowerCase() === u.toLowerCase() &&
+          (a.password || '') === p
+        );
+        if (!ag) { alert('Invalid Agent credentials!'); return; }
+        if (ag.blocked) { alert('Your Agent account is BLOCKED by Admin.'); return; }
+        currentAuthRole = 'agent:' + ag.id;
+        closeRoleLogin();
+        switchMainView('agent-view');
+        renderAgentPortal(ag);
+      }
+    }
+
+    async function logout() {
+      currentAuthRole = null;
+      if (firebaseReady && auth && auth.currentUser) {
+        try { await auth.signOut(); } catch (e) {}
+      }
+      switchMainView('website-view');
+      renderStorefront();
+    }
+
+    function switchMainView(id) {
+      ['website-view', 'product-detail-view', 'admin-view', 'agent-view'].forEach(v => {
+        document.getElementById(v).classList.add('hidden');
+      });
+      document.getElementById(id).classList.remove('hidden');
+      window.scrollTo(0, 0);
+    }
+
+    function renderStorefront(filterFn = null, headingText = 'ALL PRODUCTS') {
+      document.getElementById('header-business-name').innerText = state.layout.bizName || 'OM SAI ENTERPRISES';
+      document.getElementById('header-search-box').style.display = state.layout.showSearch === 'no' ? 'none' : 'flex';
+
+      const tickerBar = document.getElementById('note-ticker-bar');
+      const tickerText = document.getElementById('note-ticker-text');
+      tickerBar.style.background = state.layout.noteBg || '#fffae6';
+      tickerBar.style.color = state.layout.noteColor || '#111';
+      tickerText.style.fontSize = (state.layout.noteSize || 14) + 'px';
+      const lines = state.layout.noteLines && state.layout.noteLines.length ? state.layout.noteLines : ['Welcome to our Store!'];
+      tickerText.innerText = lines[activeNoteIdx % lines.length];
+
+      const menuUl = document.getElementById('dynamic-left-menu');
+      menuUl.innerHTML = state.layout.leftMenu.map(m => `
+        <li class="${m.type === 'bill' ? 'highlight-menu' : ''}" onclick="handleMenuClick('${escapeJsStr(m.id)}')">
+          <span>${escapeHtml(m.label)}</span> <span>›</span>
+        </li>
+      `).join('');
+
+      renderSlidesOnly();
+      renderPromoBlocksOnce();
+
+      document.getElementById('catalog-heading').innerText = headingText;
+      const list = filterFn ? state.products.filter(filterFn) : state.products;
+      const grid = document.getElementById('frontend-products');
+      if (!list.length) {
+        grid.innerHTML = '<p style="color:#666;">No products found in this section.</p>';
+      } else {
+        grid.innerHTML = list.map(p => {
+          const badge = getProductBadge(p);
+          const safeName = escapeHtml(p.name);
+          const safeBrand = escapeHtml(p.brand);
+          const safeVan = escapeHtml(p.van);
+          const fbImg = svgPlaceholder(p.name || p.brand || 'Product', '#1e293b', '#ffffff');
+          return `
+            <div class="product-card" onclick="openProductDetail(${Number(p.id)})">
+              <div>
+                <img src="${escapeHtml(p.image || fbImg)}" class="product-img" alt="${safeName}" onerror="this.onerror=null;this.src='${fbImg}'">
+                <div class="product-brand">${safeBrand} • VAN: ${safeVan}</div>
+                <div class="product-name">${safeName}</div>
+                <div class="product-tags">
+                  ${p.os ? `<span class="p-tag">${escapeHtml(p.os)}</span>` : ''}
+                  ${p.years && p.years !== '0' ? `<span class="p-tag">${escapeHtml(p.years)} Yr</span>` : ''}
+                  ${p.variety ? `<span class="p-tag">${escapeHtml(p.variety)}</span>` : ''}
+                </div>
+              </div>
+              <div>
+                <div class="product-price">₹${Number(p.price) || 0}</div>
+                <div class="badge-status ${badge.cls}">${escapeHtml(badge.text)}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const brands = [...new Set(state.products.map(p => p.brand).filter(Boolean))];
+      document.getElementById('popular-brands-grid').innerHTML = brands.map(b => {
+        const sample = state.products.find(x => x.brand === b);
+        const fbImg = svgPlaceholder(b, '#0f172a', '#ffffff');
+        return `
+          <div class="cat-card" onclick="openBrandStore('${escapeJsStr(b)}')">
+            <img src="${escapeHtml((sample && sample.image) || fbImg)}" alt="${escapeHtml(b)}" onerror="this.onerror=null;this.src='${fbImg}'">
+            <div class="cat-name">${escapeHtml(b)} Store <span>→</span></div>
+          </div>
+        `;
+      }).join('');
+
+      const fList = document.getElementById('footer-dynamic-details');
+      const fields = state.settings.fields;
+      fList.innerHTML = Object.values(fields).filter(f => f.show && f.value).map(f =>
+        `<li><strong>${escapeHtml(f.label)}:</strong> ${escapeHtml(f.value)}</li>`
+      ).join('');
+
+      updatePendingPaymentBanner();
+    }
+
+    function getProductBadge(p) {
+      if (p.badgeMode === 'new') return { text: 'NEW ARRIVAL', cls: 'badge-new' };
+      if (p.badgeMode === 'notify') return { text: 'NOTIFY ME', cls: 'badge-notify' };
+      if (p.badgeMode === 'out' || Number(p.stock) <= 0) return { text: 'OUT OF STOCK', cls: 'badge-out' };
+      return { text: `In Stock (${Number(p.stock)})`, cls: 'badge-instock' };
+    }
+
+    function renderSlidesOnly() {
+      const banners = state.media.filter(m => m.type === 'banner' && m.urls && m.urls.length);
+      const flatSlides = [];
+      banners.forEach(b => b.urls.forEach(u => flatSlides.push({ url: u, title: b.title, target: b.target })));
+      const slideBox = document.getElementById('store-slides');
+      if (!flatSlides.length) {
+        slideBox.style.display = 'none';
+      } else {
+        slideBox.style.display = 'block';
+        slideBox.innerHTML = flatSlides.map((s, i) => {
+          const fb = svgPlaceholder(s.title || 'Banner', '#0f172a', '#38bdf8');
+          return `
+            <div class="store-slide ${i === (activeSlideIdx % flatSlides.length) ? 'active' : ''}" onclick="filterByTarget('${escapeJsStr(s.target || '')}')">
+              <img src="${escapeHtml(s.url || fb)}" alt="${escapeHtml(s.title || 'Banner')}" onerror="this.onerror=null;this.src='${fb}'">
+              ${s.title ? `<div class="store-slide-caption">${escapeHtml(s.title)}</div>` : ''}
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    function renderPromoBlocksOnce() {
+      const wrap = document.getElementById('promo-blocks-container');
+      let html = '';
+      state.media.filter(m => m.type === 'warning').forEach(w => {
+        html += `<div class="promo-warning-box">⚠️ ${escapeHtml(w.title)}</div>`;
+      });
+      state.media.filter(m => m.type === 'note').forEach(n => {
+        html += `<div class="promo-note-box">${escapeHtml(n.title)}</div>`;
+      });
+      const minis = state.media.filter(m => m.type === 'mini' && m.urls.length);
+      if (minis.length) {
+        html += `<div class="promo-mini-strip">` + minis.map(m => {
+          const fb = svgPlaceholder(m.title || 'Mini', '#334155', '#fff');
+          return `
+            <div class="promo-mini-item" onclick="filterByTarget('${escapeJsStr(m.target || '')}')">
+              <img src="${escapeHtml(m.urls[0] || fb)}" alt="${escapeHtml(m.title)}" onerror="this.onerror=null;this.src='${fb}'">
+              <div>${escapeHtml(m.title)}</div>
+            </div>
+          `;
+        }).join('') + `</div>`;
+      }
+      const cards = state.media.filter(m => m.type === 'card' && m.urls.length);
+      if (cards.length) {
+        html += `<div class="promo-cards-grid">` + cards.map(c => {
+          const fb = svgPlaceholder(c.title || 'Card', '#1e293b', '#fff');
+          return `
+            <div class="promo-card-item" onclick="filterByTarget('${escapeJsStr(c.target || '')}')">
+              <img src="${escapeHtml(c.urls[0] || fb)}" alt="${escapeHtml(c.title)}" onerror="this.onerror=null;this.src='${fb}'">
+              <div class="p-cap">${escapeHtml(c.title)}</div>
+            </div>
+          `;
+        }).join('') + `</div>`;
+      }
+      state.media.filter(m => m.type === 'video' && m.videoUrl).forEach(v => {
+        const embed = toEmbedUrl(v.videoUrl);
+        html += `<div class="promo-video-box"><div style="font-weight:700;margin-bottom:8px;">🎬 ${escapeHtml(v.title)}</div>` +
+          (embed.isIframe
+            ? `<iframe src="${escapeHtml(embed.url)}" allowfullscreen></iframe>`
+            : `<video src="${escapeHtml(embed.url)}" controls></video>`) +
+          `</div>`;
+      });
+      wrap.innerHTML = html;
+    }
+
+    function toEmbedUrl(url) {
+      if (url.includes('youtube.com/watch?v=')) {
+        const id = url.split('v=')[1].split('&')[0];
+        return { isIframe: true, url: 'https://www.youtube.com/embed/' + encodeURIComponent(id) };
+      }
+      if (url.includes('youtu.be/')) {
+        const id = url.split('youtu.be/')[1].split('?')[0];
+        return { isIframe: true, url: 'https://www.youtube.com/embed/' + encodeURIComponent(id) };
+      }
+      return { isIframe: false, url };
+    }
+
+    function filterByTarget(t) {
+      if (!t) return;
+      const q = t.toLowerCase();
+      document.getElementById('brand-store-section').classList.add('hidden');
+      renderStorefront(p => (p.category || '').toLowerCase().includes(q) || (p.brand || '').toLowerCase().includes(q), t.toUpperCase());
+    }
+
+    function openBrandStore(brandName) {
+      const bProducts = state.products.filter(p => (p.brand || '').toLowerCase() === brandName.toLowerCase());
+      const banner = (bProducts[0] && bProducts[0].brandBanner) || svgPlaceholder(brandName + ' Store', '#0f172a', '#38bdf8');
+      document.getElementById('brand-store-banner-img').src = banner;
+      document.getElementById('brand-store-title').innerText = brandName.toUpperCase() + ' OFFICIAL BRAND STORE';
+      document.getElementById('brand-store-section').classList.remove('hidden');
+      renderStorefront(p => (p.brand || '').toLowerCase() === brandName.toLowerCase(), brandName.toUpperCase() + ' PRODUCTS');
+      window.scrollTo(0, 0);
+    }
+
+    function resetStorefront() {
+      document.getElementById('brand-store-section').classList.add('hidden');
+      document.getElementById('store-search-input').value = '';
+      renderStorefront();
+    }
+
+    function handleStoreSearch(val) {
+      const q = val.trim().toLowerCase();
+      document.getElementById('brand-store-section').classList.add('hidden');
+      if (!q) { renderStorefront(); return; }
+      renderStorefront(p =>
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.brand || '').toLowerCase().includes(q) ||
+        (p.category || '').toLowerCase().includes(q) ||
+        (p.van || '').includes(q),
+        `SEARCH: "${val}"`
+      );
+    }
+
+    function handleMenuClick(id) {
+      const item = state.layout.leftMenu.find(m => m.id === id);
+      toggleMenu();
+      if (!item) return;
+      document.getElementById('brand-store-section').classList.add('hidden');
+      if (item.type === 'history') { openCustomerHistoryModal(); return; }
+      if (item.type === 'bill') { openBillDownloadModal(); return; }
+      if (item.type === 'whatsapp_support') { openWhatsAppSupportModal(); return; }
+      if (item.type === 'all') { renderStorefront(); return; }
+      if (item.type === 'brands') {
+        document.getElementById('popular-brands-grid').scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      const q = (item.value || item.label).toLowerCase();
+      if (q.includes('new')) {
+        const newOnly = state.products.filter(p => p.badgeMode === 'new');
+        renderStorefront(newOnly.length ? (p => p.badgeMode === 'new') : null, item.label);
+      } else {
+        renderStorefront(p => (p.category || '').toLowerCase().includes(q), item.label);
+      }
+    }
+
+    function toggleMenu() {
+      document.getElementById('sidebar').classList.toggle('active');
+      document.getElementById('sidebar-overlay').classList.toggle('active');
+    }
+
+    function openProductDetail(id) {
+      const p = state.products.find(x => Number(x.id) === Number(id));
+      if (!p) return;
+      currentProduct = p;
+      selectedInstallType = 'online';
+
+      document.getElementById('d-img').src = p.image || svgPlaceholder(p.name, '#1e293b', '#fff');
+      document.getElementById('d-brand').innerText = p.brand;
+      document.getElementById('d-name').innerText = p.name;
+      document.getElementById('d-van-badge').innerText = `Inventory 6-Digit VAN: ${p.van}`;
+      document.getElementById('d-desc').innerText = p.desc || '';
+
+      const tags = [
+        p.os ? `OS: ${p.os}` : '',
+        p.years && p.years !== '0' ? `Validity: ${p.years} Year(s)` : '',
+        p.variety ? `Edition: ${p.variety}` : ''
+      ].filter(Boolean);
+      document.getElementById('d-specs-tags').innerHTML = tags.map(t => `<span class="p-tag">${escapeHtml(t)}</span>`).join('');
+
+      const extraList = document.getElementById('d-extra-specs');
+      extraList.innerHTML = tags.map(t => `<li><strong>${escapeHtml(t)}</strong></li>`).join('') +
+        (p.customAttrs || []).map(c => `<li><strong>${escapeHtml(c.key)}:</strong> ${escapeHtml(c.val)}</li>`).join('');
+
+      const onlineFee = Number(state.settings.installOnline || 299);
+      const visitFee = Number(state.settings.installVisit || 400);
+      document.getElementById('inst-btn-online').innerText = `💻 Online Desk Installation (₹${onlineFee})`;
+      document.getElementById('inst-btn-visit').innerText = `🏠 Expert Visit Installation (₹${visitFee})`;
+
+      const badge = getProductBadge(p);
+      const cta = document.getElementById('d-book-cta');
+      if (badge.cls === 'badge-notify') cta.innerText = 'NOTIFY ME WHEN AVAILABLE';
+      else if (badge.cls === 'badge-out') cta.innerText = 'OUT OF STOCK (REQUEST CALLBACK)';
+      else cta.innerText = 'BOOK NOW & PAY VIA UPI QR';
+
+      selectInstallType('online');
+      switchMainView('product-detail-view');
+    }
+
+    function closeProductDetail() { switchMainView('website-view'); }
+
+    function selectInstallType(type) {
+      selectedInstallType = type;
+      document.getElementById('inst-btn-online').classList.toggle('active', type === 'online');
+      document.getElementById('inst-btn-visit').classList.toggle('active', type === 'visit');
+      const instCharge = type === 'online' ? Number(state.settings.installOnline || 299) : Number(state.settings.installVisit || 400);
+      const pPrice = currentProduct ? Number(currentProduct.price || 0) : 0;
+      document.getElementById('d-price').innerText = '₹' + pPrice;
+      document.getElementById('d-install').innerText = '₹' + instCharge;
+      document.getElementById('d-total').innerText = '₹' + (pPrice + instCharge);
+    }
+
+    function switchDetailTab(tab, e) {
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      if (e && e.target) e.target.classList.add('active');
+    }
+
+    function openBookingModal() {
+      if (!currentProduct) return;
+      bookingScreenshotData = '';
+      document.getElementById('booking-step-1').classList.remove('hidden');
+      document.getElementById('booking-step-2').classList.add('hidden');
+      document.getElementById('upi-app-feedback').innerText = '';
+      const onlineFee = Number(state.settings.installOnline || 299);
+      const visitFee = Number(state.settings.installVisit || 400);
+      const sel = document.getElementById('book-install-mode');
+      sel.options[0].text = `Online Desk Installation (₹${onlineFee})`;
+      sel.options[1].text = `Expert Visit Installation (₹${visitFee})`;
+      sel.value = selectedInstallType;
+      document.getElementById('book-ss-preview').classList.add('hidden');
+      document.getElementById('book-screenshot').value = '';
+      updateBookingModalTotal();
+      document.getElementById('booking-modal').classList.add('active');
+    }
+
+    function closeBookingModal() { document.getElementById('booking-modal').classList.remove('active'); }
+
+    function updateBookingModalTotal() {
+      const mode = document.getElementById('book-install-mode').value;
+      const inst = mode === 'online' ? Number(state.settings.installOnline || 299) : Number(state.settings.installVisit || 400);
+      const total = Number(currentProduct.price || 0) + inst;
+      document.getElementById('modal-total-amount').innerText = '₹' + total;
+      return total;
+    }
+
+    function getOrderInstallLabelAndTotal() {
+      const mode = document.getElementById('book-install-mode').value;
+      const onlineFee = Number(state.settings.installOnline || 299);
+      const visitFee = Number(state.settings.installVisit || 400);
+      const instCharge = mode === 'online' ? onlineFee : visitFee;
+      const total = Number(currentProduct.price || 0) + instCharge;
+      const label = mode === 'online' ? `Online Desk (₹${onlineFee})` : `Expert Visit (₹${visitFee})`;
+      return { mode, instCharge, total, label };
+    }
+
+    function getMyLocalOrderIds() {
+      try { return JSON.parse(localStorage.getItem(MY_ORDERS_KEY) || '[]'); } catch (e) { return []; }
+    }
+    function saveMyLocalOrderId(orderId) {
+      const ids = getMyLocalOrderIds();
+      if (!ids.includes(orderId)) {
+        ids.unshift(orderId);
+        localStorage.setItem(MY_ORDERS_KEY, JSON.stringify(ids));
+      }
+      pendingBannerDismissed = false;
+    }
+
+    async function proceedToUpiQr(e) {
+      e.preventDefault();
+      const { total, label } = getOrderInstallLabelAndTotal();
+      const upiId = state.settings.upiId || 'omsaienterprises@upi';
+      const upiName = state.settings.upiName || 'Om Sai Enterprises';
+      const custName = document.getElementById('book-name').value.trim();
+      const phone = document.getElementById('book-phone').value.trim();
+      const email = document.getElementById('book-email').value.trim();
+      const address = document.getElementById('book-address').value.trim();
+
+      const orderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+      activeDraftOrderId = orderId;
+      document.getElementById('live-order-badge-id').innerText = orderId;
+
+      const liveOrder = {
+        id: orderId,
+        createdAtMs: Date.now(),
+        date: new Date().toLocaleDateString('en-IN'),
+        customerName: custName,
+        phone,
+        email,
+        address,
+        productId: currentProduct.id,
+        productName: currentProduct.name,
+        van: currentProduct.van,
+        years: currentProduct.years || '1',
+        installMode: label,
+        totalAmount: total,
+        txnId: 'Not Paid Yet',
+        paymentScreenshot: '',
+        paymentVerified: false,
+        assignedAgentId: '',
+        status: 'Unpaid / Payment Pending',
+        completionScreenshot: '',
+        billNo: ''
+      };
+
+      state.orders.unshift(liveOrder);
+      saveMyLocalOrderId(orderId);
+      await saveOrderDoc(liveOrder);
+      updatePendingPaymentBanner();
+
+      document.getElementById('qr-payee-name').innerText = upiName;
+      document.getElementById('qr-upi-id').innerText = 'UPI ID: ' + upiId;
+      document.getElementById('qr-pay-amount').innerText = '₹' + total;
+
+      activeUpiPayUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(upiName)}&tr=${encodeURIComponent(orderId)}&tn=${encodeURIComponent(currentProduct.name)}&am=${total}&cu=INR`;
+      const qrBox = document.getElementById('upi-qrcode-box');
+      qrBox.innerHTML = '';
+      try {
+        if (typeof QRCode !== 'undefined') {
+          new QRCode(qrBox, { text: activeUpiPayUrl, width: 175, height: 175 });
+        } else {
+          throw new Error('QR library unavailable');
+        }
+      } catch (qrErr) {
+        qrBox.innerHTML = `<div style="padding:14px;border:1px dashed #333;border-radius:6px;font-size:12px;word-break:break-all;">UPI ID: <b>${escapeHtml(upiId)}</b><br>Payee: <b>${escapeHtml(upiName)}</b><br>Amount: <b>₹${total}</b></div>`;
+      }
+
+      document.getElementById('booking-step-1').classList.add('hidden');
+      document.getElementById('booking-step-2').classList.remove('hidden');
+    }
+
+    function launchDirectUpiApp(appName) {
+      const fb = document.getElementById('upi-app-feedback');
+      if (!activeUpiPayUrl) return;
+      const appSchemes = {
+        gpay: activeUpiPayUrl.replace('upi://pay?', 'tez://upi/pay?'),
+        paytm: activeUpiPayUrl.replace('upi://pay?', 'paytmmp://pay?'),
+        phonepe: activeUpiPayUrl.replace('upi://pay?', 'phonepe://pay?'),
+        bhim: activeUpiPayUrl.replace('upi://pay?', 'bhim://pay?')
+      };
+      const scheme = appSchemes[appName] || activeUpiPayUrl;
+      if (fb) {
+        fb.innerText = `Opening ${appName.toUpperCase()}... Agar desktop/iOS browser mein app open na ho, to upar QR scan karein ya UPI ID (${state.settings.upiId}) se pay karein.`;
+      }
+      try {
+        window.location.href = scheme;
+      } catch (err) {
+        if (fb) fb.innerText = 'Direct app open supported nahi hai — kripya QR code scan karein.';
+      }
+    }
+
+    async function shareAlreadyPaidOnWhatsApp() {
+      const o = state.orders.find(x => x.id === activeDraftOrderId);
+      const shopWaRaw = (state.settings.fields && state.settings.fields.altNumber && state.settings.fields.altNumber.value) || '919653435223';
+      const cleanShopWa = shopWaRaw.replace(/\D/g, '');
+      const waTarget = cleanShopWa.length === 10 ? '91' + cleanShopWa : cleanShopWa;
+      const custName = document.getElementById('book-name').value.trim();
+      const phone = document.getElementById('book-phone').value.trim();
+      const txn = document.getElementById('book-txn-id').value.trim();
+      const { total, label } = getOrderInstallLabelAndTotal();
+
+      if (o) {
+        o.status = 'Already Paid (Shared on WhatsApp)';
+        if (txn) o.txnId = txn;
+        await saveOrderDoc(o);
+      }
+
+      const msg = `*Already Payment Done — Screenshot Share*\nOrder ID: *${activeDraftOrderId}*\nName: ${custName}\nMobile: ${phone}\nProduct: ${currentProduct.name} (VAN: ${currentProduct.van})\nInstallation: ${label}\nAmount: *₹${total}*${txn ? '\nTxn ID: ' + txn : ''}\n\n(Main apna payment screenshot is chat mein attach kar raha/rahi hoon)`;
+      window.open(`https://wa.me/${waTarget}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    async function previewBookingScreenshot(e) {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      bookingScreenshotData = await compressScreenshotToCompactDataUrl(f);
+      const img = document.getElementById('book-ss-preview');
+      img.src = bookingScreenshotData;
+      img.classList.remove('hidden');
+    }
+
+    async function submitBookingWithScreenshot() {
+      const o = state.orders.find(x => x.id === activeDraftOrderId);
+      const txn = document.getElementById('book-txn-id').value.trim();
+      if (!bookingScreenshotData && !txn) {
+        alert('Please upload payment screenshot, enter Transaction ID, or click "Already Paid" WhatsApp button.');
+        return;
+      }
+      if (o) {
+        if (bookingScreenshotData) o.paymentScreenshot = bookingScreenshotData;
+        if (txn) o.txnId = txn;
+        o.status = 'Payment Screenshot Uploaded (Pending Admin Verify)';
+        await saveOrderDoc(o);
+      }
+      closeBookingModal();
+      closeProductDetail();
+      alert(`Details & Payment Proof updated! Order ID: ${activeDraftOrderId}`);
+    }
+
+    function finishBookingWithoutPayment() {
+      alert(`Aapki booking (${activeDraftOrderId}) ho chuki hai par payment abhi pending hai. Aap Left Menu ke "History / My Bookings" se kabhi bhi payment complete kar sakte hain.`);
+      closeBookingModal();
+      closeProductDetail();
+      updatePendingPaymentBanner();
+    }
+
+    function updatePendingPaymentBanner() {
+      const banner = document.getElementById('customer-pending-payment-banner');
+      if (!banner) return;
+      if (pendingBannerDismissed) { banner.classList.add('hidden'); return; }
+      const myIds = getMyLocalOrderIds();
+      const unpaidOrders = state.orders.filter(o =>
+        myIds.includes(o.id) &&
+        !o.paymentVerified &&
+        !o.billNo &&
+        (o.status || '').toLowerCase().includes('unpaid')
+      );
+      if (!unpaidOrders.length) {
+        banner.classList.add('hidden');
+        return;
+      }
+      const latest = unpaidOrders[0];
+      document.getElementById('pending-payment-banner-text').innerHTML =
+        `⚠️ Notification: Aapne <b>${escapeHtml(latest.productName)}</b> (${escapeHtml(latest.id)}) book kiya hai, lekin kisi kaaran payment abhi pending hai (₹${Number(latest.totalAmount) || 0}).`;
+      banner.classList.remove('hidden');
+    }
+
+    function dismissPendingBanner() {
+      pendingBannerDismissed = true;
+      document.getElementById('customer-pending-payment-banner').classList.add('hidden');
+    }
+
+    function openCustomerHistoryModal() {
+      document.getElementById('customer-history-modal').classList.add('active');
+      renderCustomerHistoryList();
+    }
+
+    function renderCustomerHistoryList() {
+      const box = document.getElementById('customer-history-list');
+      const ordQ = (document.getElementById('hist-order-filter')?.value || '').trim().toLowerCase();
+      const phQ = (document.getElementById('hist-phone-filter')?.value || '').trim().replace(/\D/g, '');
+      const myIds = getMyLocalOrderIds();
+
+      let list = [];
+      if (ordQ || phQ) {
+        list = state.orders.filter(o => {
+          const orderMatch = ordQ && o.id.toLowerCase() === ordQ;
+          const phoneMatch = phQ.length >= 10 && (o.phone || '').replace(/\D/g, '').endsWith(phQ.slice(-10));
+          return (ordQ && phQ) ? (orderMatch && phoneMatch) : (orderMatch || phoneMatch);
+        });
+        if (!list.length) {
+          box.innerHTML = `<div style="padding:14px;text-align:center;color:#a8071a;background:#fff2f0;border-radius:8px;font-size:13px;">
+            Matching booking nahi mili. Privacy ke liye poora <b>Order ID</b> (e.g. ORD-123456) ya <b>10-digit Mobile Number</b> daalein.
+          </div>`;
+          return;
+        }
+      } else {
+        list = state.orders.filter(o => myIds.includes(o.id));
+      }
+
+      if (!list.length) {
+        box.innerHTML = `<div style="padding:16px;text-align:center;color:#666;background:#f9f9f9;border-radius:8px;">
+          Is browser mein abhi koi recent booking history nahi mili.<br>
+          <small>Privacy ke liye apna exact <b>Order ID</b> ya <b>10-digit Mobile Number</b> daalkar search karein.</small>
+        </div>`;
+        return;
+      }
+
+      box.innerHTML = list.map(o => {
+        const isUnpaid = !o.paymentVerified && !o.billNo && (o.status || '').toLowerCase().includes('unpaid');
+        const statusColor = o.status === 'Completed' ? '#16803c' : (isUnpaid ? '#cf1322' : '#d97706');
+        return `
+          <div style="border:1px solid ${isUnpaid ? '#ffa39e' : '#e5e5e5'};background:${isUnpaid ? '#fff1f0' : '#fafafa'};padding:14px;border-radius:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+              <div>
+                <strong>${escapeHtml(o.productName)}</strong> <span class="p-tag">VAN: ${escapeHtml(o.van)}</span><br>
+                <small style="color:#555;">Order ID: <b>${escapeHtml(o.id)}</b> | Date: ${escapeHtml(o.date)} | ${escapeHtml(o.installMode)}</small>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:16px;font-weight:900;">₹${Number(o.totalAmount) || 0}</div>
+                <span style="font-size:11px;font-weight:800;color:${statusColor};">${escapeHtml(o.status)}</span>
+              </div>
+            </div>
+            ${isUnpaid ? `<div style="font-size:12px;color:#a8071a;font-weight:700;margin-bottom:8px;">⚠️ Booking ho chuki hai par payment pending hai:</div>` : ''}
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              ${isUnpaid ? `<button type="button" class="btn-green" style="font-size:12px;padding:7px 11px;" onclick="resumePendingOrderPayment('${escapeJsStr(o.id)}')">💳 Pay Now / Upload Proof</button>` : ''}
+              ${o.billNo ? `<button type="button" class="btn-blue" style="font-size:12px;padding:7px 11px;" onclick="closeModal('customer-history-modal');openBillDownloadModalForBill('${escapeJsStr(o.billNo)}')">📄 Download Bill (${escapeHtml(o.billNo)})</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function resumePendingOrderPayment(orderId) {
+      const o = state.orders.find(x => x.id === orderId);
+      if (!o) return;
+      closeModal('customer-history-modal');
+      const prod = state.products.find(p => Number(p.id) === Number(o.productId)) || {
+        id: o.productId, name: o.productName, van: o.van, price: o.totalAmount, years: o.years || '1'
+      };
+      currentProduct = prod;
+      activeDraftOrderId = o.id;
+      bookingScreenshotData = '';
+
+      document.getElementById('book-name').value = o.customerName || '';
+      document.getElementById('book-phone').value = o.phone || '';
+      document.getElementById('book-email').value = o.email || '';
+      document.getElementById('book-address').value = o.address || '';
+      document.getElementById('book-txn-id').value = '';
+      document.getElementById('book-screenshot').value = '';
+      document.getElementById('book-ss-preview').classList.add('hidden');
+      document.getElementById('live-order-badge-id').innerText = o.id;
+
+      const upiId = state.settings.upiId || 'omsaienterprises@upi';
+      const upiName = state.settings.upiName || 'Om Sai Enterprises';
+      document.getElementById('qr-payee-name').innerText = upiName;
+      document.getElementById('qr-upi-id').innerText = 'UPI ID: ' + upiId;
+      document.getElementById('qr-pay-amount').innerText = '₹' + o.totalAmount;
+
+      activeUpiPayUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(upiName)}&tr=${encodeURIComponent(o.id)}&tn=${encodeURIComponent(o.productName)}&am=${o.totalAmount}&cu=INR`;
+      const qrBox = document.getElementById('upi-qrcode-box');
+      qrBox.innerHTML = '';
+      try {
+        if (typeof QRCode !== 'undefined') new QRCode(qrBox, { text: activeUpiPayUrl, width: 175, height: 175 });
+      } catch (e) {}
+
+      document.getElementById('booking-step-1').classList.add('hidden');
+      document.getElementById('booking-step-2').classList.remove('hidden');
+      document.getElementById('booking-modal').classList.add('active');
+    }
+
+    const WA_SUPPORT_PRESETS = [
+      { id: 'q1', title: '1. Which Antivirus Should I Buy? (Best Recommendation)', badge: 'Product Guidance', msg: 'Hello Team, I am looking to purchase a genuine Antivirus for my device. Could you please recommend the best option based on performance and protection?' },
+      { id: 'q2', title: '2. Help Me Choose the Right Plan & Validity (1 / 2 / 3 Years)', badge: 'Plan Selection', msg: 'Hello Team, I need assistance in choosing the right software plan, validity (1/2/3 years), and multi-device package as per my requirements.' },
+      { id: 'q3', title: '3. MS Office / Software Compatibility Enquiry', badge: 'Software Info', msg: 'Hello Team, I would like to enquire about genuine MS Office / software versions and confirm compatibility with my system before booking.' },
+      { id: 'q4', title: '4. Online Desk (₹299) vs Expert Visit (₹400) Installation Help', badge: 'Installation', msg: 'Hello Team, please guide me regarding the installation process and help me choose between Online Desk Installation and Expert Home/Office Visit.' },
+      { id: 'q5', title: '5. Payment & UPI Transaction Verification Enquiry', badge: 'Payment', msg: 'Hello Team, I have a query regarding my booking payment / UPI transaction status. Please help me verify and confirm my order.' },
+      { id: 'q6', title: '6. Antivirus Activation, License Key or Setup Issue', badge: 'Technical Issue', msg: 'Hello Team, I am facing an issue with Antivirus installation, license key activation, or update. Requesting technical support.' },
+      { id: 'q7', title: '7. PC / Laptop Slow or Virus Removal Assistance', badge: 'Virus & Speed', msg: 'Hello Team, my computer/laptop is running slow or showing virus warnings. Please assist me with malware cleanup and protection setup.' },
+      { id: 'q8', title: '8. Plan Renewal & Expiry Extension Enquiry', badge: 'Renewal', msg: 'Hello Team, my existing Antivirus / MS Office subscription is expiring soon. Please share the best renewal offer and process.' },
+      { id: 'q9', title: '9. Bulk / Office / Multi-PC License Discount Enquiry', badge: 'Bulk / Business', msg: 'Hello Team, we require multiple Antivirus / MS Office licenses for our office/business systems. Please share bulk pricing details.' },
+      { id: 'q10', title: '10. General Support / Any Other Enquiry', badge: 'General Help', msg: 'Hello Team, I need general assistance and have an enquiry regarding your products and services. Please connect with me.' }
+    ];
+    let selectedWaPresetId = 'q1';
+
+    function openWhatsAppSupportModal() {
+      selectedWaPresetId = 'q1';
+      document.getElementById('wasup-extra').value = '';
+      renderWaSupportPresets();
+      document.getElementById('wa-support-modal').classList.add('active');
+    }
+    function selectWaPreset(id) { selectedWaPresetId = id; renderWaSupportPresets(); }
+    function renderWaSupportPresets() {
+      const box = document.getElementById('wa-support-questions-list');
+      box.innerHTML = WA_SUPPORT_PRESETS.map(item => {
+        const active = item.id === selectedWaPresetId;
+        return `
+          <div onclick="selectWaPreset('${item.id}')" style="border:2px solid ${active ? '#25D366' : '#e5e5e5'};background:${active ? '#f6ffed' : '#fafafa'};padding:10px 12px;border-radius:8px;cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">
+              <strong style="font-size:13px;color:#111;">${escapeHtml(item.title)}</strong>
+              <span class="p-tag" style="background:${active ? '#25D366' : '#eaeaea'};color:${active ? '#fff' : '#333'};">${escapeHtml(item.badge)}</span>
+            </div>
+            <div style="font-size:12px;color:#555;">"${escapeHtml(item.msg)}"</div>
+          </div>
+        `;
+      }).join('');
+    }
+    function sendSelectedWaSupport() {
+      const preset = WA_SUPPORT_PRESETS.find(x => x.id === selectedWaPresetId) || WA_SUPPORT_PRESETS[0];
+      const cName = (document.getElementById('wasup-name').value || '').trim();
+      const device = (document.getElementById('wasup-device').value || '').trim();
+      const extra = (document.getElementById('wasup-extra').value || '').trim();
+      const bizName = (state.settings.fields && state.settings.fields.businessName && state.settings.fields.businessName.value) || 'Om Sai Enterprises';
+      const shopWaRaw = (state.settings.fields && state.settings.fields.altNumber && state.settings.fields.altNumber.value) || '919653435223';
+      const cleanShopWa = shopWaRaw.replace(/\D/g, '');
+      const waTarget = cleanShopWa.length === 10 ? '91' + cleanShopWa : cleanShopWa;
+
+      let fullMsg = `*Customer Support Enquiry — ${bizName}*\n*Topic:* ${preset.badge}\n`;
+      if (cName) fullMsg += `*Customer Name:* ${cName}\n`;
+      if (device) fullMsg += `*Device / OS:* ${device}\n`;
+      fullMsg += `\n${preset.msg}`;
+      if (extra) fullMsg += `\n\n*Additional Details:* ${extra}`;
+      window.open(`https://wa.me/${waTarget}?text=${encodeURIComponent(fullMsg)}`, '_blank');
+    }
+
+    function showInfoModal(title, content) {
+      document.getElementById('info-modal-title').innerText = title;
+      document.getElementById('info-modal-body').innerText = content || 'Details not updated yet.';
+      document.getElementById('info-modal').classList.add('active');
+    }
+
+    function switchAdminTab(tab, btn) {
+      document.querySelectorAll('.admin-section').forEach(s => s.style.display = 'none');
+      document.querySelectorAll('.admin-menu-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('admin-' + tab).style.display = 'block';
+      if (btn) btn.classList.add('active');
+    }
+
+    function renderAllAdmin() {
+      document.getElementById('admin-top-biz').innerText = `${state.layout.bizName} — Admin Control`;
+      renderLiveOrdersTable();
+      renderInvoicesTable();
+      renderInventoryTable();
+      renderAgentsTable();
+      renderLayoutAdmin();
+      renderMediaAdminList();
+      renderSettingsAdmin();
+    }
+
+    function renderLiveOrdersTable() {
+      const tb = document.getElementById('admin-orders-table');
+      if (!state.orders.length) {
+        tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#666;">No live orders yet.</td></tr>';
+        return;
+      }
+      tb.innerHTML = state.orders.map(o => {
+        const agentOptions = `<option value="">-- Select Agent --</option>` +
+          state.agents.filter(a => !a.blocked).map(a =>
+            `<option value="${escapeHtml(a.id)}" ${o.assignedAgentId === a.id ? 'selected' : ''}>${escapeHtml(a.name)} (${escapeHtml(a.phone)})</option>`
+          ).join('');
+        return `
+          <tr>
+            <td>
+              <strong>${escapeHtml(o.id)}</strong> (${escapeHtml(o.date)})<br>
+              <b>${escapeHtml(o.customerName)}</b><br>
+              📱 ${escapeHtml(o.phone)}<br>
+              ✉️ ${escapeHtml(o.email)}<br>
+              📍 <small>${escapeHtml(o.address)}</small>
+            </td>
+            <td>
+              <b>${escapeHtml(o.productName)}</b><br>
+              VAN: <code>${escapeHtml(o.van)}</code><br>
+              ${escapeHtml(o.installMode)}<br>
+              <strong>Total: ₹${Number(o.totalAmount) || 0}</strong>
+            </td>
+            <td>
+              Txn: ${escapeHtml(o.txnId)}<br>
+              Status: <b style="color:${o.status==='Completed'?'green':'#d97706'}">${escapeHtml(o.status)}</b><br>
+              ${o.paymentScreenshot ? `<button type="button" class="btn-blue" style="margin-top:4px;padding:4px 8px;" onclick="openOrderSsById('${escapeJsStr(o.id)}','pay')">View Payment SS</button><br>` : ''}
+              ${o.completionScreenshot ? `<button type="button" class="btn-green" style="margin-top:4px;padding:4px 8px;" onclick="openOrderSsById('${escapeJsStr(o.id)}','done')">View Proof SS</button>` : ''}
+            </td>
+            <td>
+              <select onchange="assignAgentToOrder('${escapeJsStr(o.id)}', this.value)" style="padding:6px;border-radius:4px;margin-bottom:6px;width:100%;">
+                ${agentOptions}
+              </select><br>
+              <button type="button" class="btn-wa" onclick="shareOrderWithAgentWa('${escapeJsStr(o.id)}')">📲 Share to Agent WA</button>
+            </td>
+            <td>
+              <button type="button" class="btn-green" onclick="openBillCreateModal('${escapeJsStr(o.id)}')">
+                ${o.billNo ? '🧾 View Bill (' + escapeHtml(o.billNo) + ')' : '✅ Confirm & Make Bill'}
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openOrderSsById(orderId, kind) {
+      const o = state.orders.find(x => x.id === orderId);
+      if (!o) return;
+      if (kind === 'pay' && o.paymentScreenshot) openScreenshotModal(o.paymentScreenshot, `Payment Screenshot — ${o.id}`);
+      if (kind === 'done' && o.completionScreenshot) openScreenshotModal(o.completionScreenshot, `Installation Proof — ${o.id}`);
+    }
+
+    async function assignAgentToOrder(orderId, agentId) {
+      const o = state.orders.find(x => x.id === orderId);
+      if (!o) return;
+      o.assignedAgentId = agentId;
+      if (agentId && o.status === 'Unpaid / Payment Pending') o.status = 'Assigned to Agent';
+      await saveOrderDoc(o);
+      renderLiveOrdersTable();
+    }
+
+    function shareOrderWithAgentWa(orderId) {
+      const o = state.orders.find(x => x.id === orderId);
+      if (!o || !o.assignedAgentId) { alert('Please select an Agent first!'); return; }
+      const ag = state.agents.find(a => a.id === o.assignedAgentId);
+      if (!ag) return;
+      const msg = `*New Installation Job (${o.id})*\nCustomer: ${o.customerName}\nMobile: ${o.phone}\nAddress: ${o.address}\nProduct: ${o.productName} (VAN: ${o.van})\nMode: ${o.installMode}`;
+      const cleanPhone = (ag.phone || '').replace(/\D/g, '');
+      window.open(`https://wa.me/${cleanPhone.length===10?'91'+cleanPhone:cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function openBillCreateModal(orderId) {
+      const o = state.orders.find(x => x.id === orderId);
+      if (!o) return;
+      if (o.billNo) { openBillDownloadModalForBill(o.billNo); return; }
+      document.getElementById('bill-order-id').value = o.id;
+      document.getElementById('b-cust-name').value = o.customerName;
+      document.getElementById('b-cust-phone').value = o.phone;
+      document.getElementById('b-cust-email').value = o.email;
+      document.getElementById('b-cust-address').value = o.address;
+      document.getElementById('b-prod-name').value = `${o.productName} (${o.installMode})`;
+      document.getElementById('b-van').value = o.van;
+      document.getElementById('b-qty').value = 1;
+      document.getElementById('b-rate').value = o.totalAmount;
+      document.getElementById('b-gst').value = state.settings.gstRate || 18;
+      document.getElementById('b-years').value = o.years || '1';
+      document.getElementById('b-txn').value = o.txnId;
+      document.getElementById('b-key').value = '';
+      document.getElementById('b-note').value = '';
+      document.getElementById('bill-create-modal').classList.add('active');
+    }
+
+    function openManualBillModal() {
+      document.getElementById('bill-order-id').value = '';
+      ['b-cust-name','b-cust-phone','b-cust-email','b-cust-address','b-prod-name','b-key','b-txn','b-note'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('b-van').value = String(Math.floor(100000 + Math.random() * 900000));
+      document.getElementById('b-qty').value = 1;
+      document.getElementById('b-rate').value = 999;
+      document.getElementById('b-gst').value = state.settings.gstRate || 18;
+      document.getElementById('bill-create-modal').classList.add('active');
+    }
+
+    async function finalizeAndSaveBill(e) {
+      e.preventDefault();
+      const orderId = document.getElementById('bill-order-id').value;
+      const qty = Math.max(1, Number(document.getElementById('b-qty').value) || 1);
+      const rate = Math.max(0, Number(document.getElementById('b-rate').value) || 0);
+      const gstPct = Math.max(0, Number(document.getElementById('b-gst').value) || 0);
+      const subTotal = qty * rate;
+      const gstAmt = Math.round((subTotal * gstPct) / (100 + gstPct));
+      const baseRate = Number((rate - (gstAmt / qty)).toFixed(2));
+      const years = Number(document.getElementById('b-years').value) || 1;
+
+      const renDate = new Date();
+      renDate.setFullYear(renDate.getFullYear() + years);
+      const renewalDateStr = renDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+      const billNo = 'INV-' + (1001 + state.invoices.length);
+      const inv = {
+        billNo,
+        createdAtMs: Date.now(),
+        date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        customerName: document.getElementById('b-cust-name').value.trim(),
+        phone: document.getElementById('b-cust-phone').value.trim(),
+        email: document.getElementById('b-cust-email').value.trim(),
+        address: document.getElementById('b-cust-address').value.trim(),
+        product: document.getElementById('b-prod-name').value.trim(),
+        van: document.getElementById('b-van').value.trim(),
+        qty,
+        baseRate,
+        gstPct,
+        gstAmt,
+        totalAmount: subTotal,
+        amountWords: numberToIndianWords(subTotal),
+        productKey: document.getElementById('b-key').value.trim(),
+        txnId: document.getElementById('b-txn').value.trim(),
+        note: document.getElementById('b-note').value.trim(),
+        renewalDate: renewalDateStr
+      };
+
+      state.invoices.unshift(inv);
+      await saveInvoiceDoc(inv);
+
+      if (orderId) {
+        const o = state.orders.find(x => x.id === orderId);
+        if (o) {
+          o.billNo = billNo;
+          o.paymentVerified = true;
+          if (o.txnId === 'Not Paid Yet') o.txnId = inv.txnId;
+          if (!o.status.toLowerCase().includes('completed')) o.status = 'Payment Verified & Billed';
+          await saveOrderDoc(o);
+          const prod = state.products.find(p => Number(p.id) === Number(o.productId));
+          if (prod && Number(prod.stock) > 0) {
+            prod.stock = Number(prod.stock) - 1;
+            await pushCatalogAndConfigToCloud(false);
+          }
+        }
+      }
+
+      closeModal('bill-create-modal');
+      renderAllAdmin();
+      openBillDownloadModalForBill(billNo);
+    }
+
+    function renderInvoicesTable() {
+      const q = (document.getElementById('invoice-search-input')?.value || '').trim().toLowerCase();
+      const tb = document.getElementById('admin-invoices-table');
+      const list = state.invoices.filter(i =>
+        !q || (i.billNo || '').toLowerCase().includes(q) || (i.phone || '').includes(q) || (i.customerName || '').toLowerCase().includes(q)
+      );
+      if (!list.length) {
+        tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#666;">No invoices recorded yet.</td></tr>';
+        return;
+      }
+      tb.innerHTML = list.map(i => `
+        <tr>
+          <td><strong>${escapeHtml(i.billNo)}</strong><br><small>${escapeHtml(i.date)}</small></td>
+          <td>${escapeHtml(i.customerName)}<br><small>${escapeHtml(i.phone)}</small></td>
+          <td>${escapeHtml(i.product)}<br><small>VAN: ${escapeHtml(i.van)} | Key: ${escapeHtml(i.productKey)}</small></td>
+          <td><strong>₹${Number(i.totalAmount) || 0}</strong><br><small>GST: ₹${Number(i.gstAmt) || 0}</small></td>
+          <td><strong>${escapeHtml(i.renewalDate)}</strong></td>
+          <td><button type="button" class="btn-blue" onclick="openBillDownloadModalForBill('${escapeJsStr(i.billNo)}')">View / PDF / Send</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function openBillDownloadModal() {
+      document.getElementById('dl-bill-query').value = '';
+      document.getElementById('dl-bill-mobile').value = '';
+      document.getElementById('bill-search-results').innerHTML = '';
+      document.getElementById('printable-bill-area').innerHTML = '';
+      document.getElementById('bill-action-buttons').classList.add('hidden');
+      document.getElementById('bill-download-modal').classList.add('active');
+    }
+
+    function openBillDownloadModalForBill(billNo) {
+      const inv = state.invoices.find(x => x.billNo === billNo);
+      document.getElementById('bill-download-modal').classList.add('active');
+      document.getElementById('bill-search-results').innerHTML = '';
+      if (inv) renderInvoiceSheet(inv.billNo);
+    }
+
+    function searchCustomerBill() {
+      const billQ = document.getElementById('dl-bill-query').value.trim().toLowerCase();
+      const mobQ = document.getElementById('dl-bill-mobile').value.trim().replace(/\D/g, '');
+      if (!billQ && mobQ.length < 10) {
+        alert('Privacy ke liye Bill Number aur registered 10-digit Mobile Number dono enter karein.');
+        return;
+      }
+      const matches = state.invoices.filter(i => {
+        const bOk = !billQ || (i.billNo || '').toLowerCase() === billQ;
+        const mOk = !mobQ || (i.phone || '').replace(/\D/g, '').endsWith(mobQ.slice(-10));
+        return bOk && mOk && (billQ || mobQ.length >= 10);
+      });
+      if (!matches.length) {
+        document.getElementById('bill-search-results').innerHTML = '<p style="color:#dc3545;font-weight:700;">Matching bill nahi mila. Kripya sahi Bill Number aur Mobile Number check karein.</p>';
+        document.getElementById('printable-bill-area').innerHTML = '';
+        document.getElementById('bill-action-buttons').classList.add('hidden');
+        return;
+      }
+      document.getElementById('bill-search-results').innerHTML = '';
+      renderInvoiceSheet(matches[0].billNo);
+    }
+
+    function renderInvoiceSheet(billNo) {
+      const inv = state.invoices.find(x => x.billNo === billNo);
+      if (!inv) return;
+      const f = state.settings.fields;
+      const bizName = f.businessName.value || 'Om Sai Enterprises';
+      const waNum = f.altNumber.value || '';
+      const webUrl = f.website.value || '';
+
+      document.getElementById('printable-bill-area').innerHTML = `
+        <div class="invoice-paper">
+          <div class="inv-head">
+            <div>
+              <h2 style="font-size:20px;margin-bottom:4px;">${escapeHtml(bizName)}</h2>
+              ${f.location.show ? `<div>${escapeHtml(f.location.value)}</div>` : ''}
+              ${f.gst.show ? `<div><strong>GSTIN:</strong> ${escapeHtml(f.gst.value)}</div>` : ''}
+              ${f.udyam.show ? `<div><strong>Udyam:</strong> ${escapeHtml(f.udyam.value)}</div>` : ''}
+              ${f.email.show ? `<div>Email: ${escapeHtml(f.email.value)}</div>` : ''}
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:16px;font-weight:900;">TAX INVOICE</div>
+              <div><strong>Bill No:</strong> ${escapeHtml(inv.billNo)}</div>
+              <div><strong>Date:</strong> ${escapeHtml(inv.date)}</div>
+              <div><strong>Txn ID:</strong> ${escapeHtml(inv.txnId)}</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:10px;">
+            <strong>Billed To:</strong> ${escapeHtml(inv.customerName)} | <strong>Mobile:</strong> ${escapeHtml(inv.phone)}<br>
+            ${inv.email ? `<strong>Email:</strong> ${escapeHtml(inv.email)} | ` : ''}<strong>Address:</strong> ${escapeHtml(inv.address || 'N/A')}
+          </div>
+
+          <table class="inv-table">
+            <thead>
+              <tr>
+                <th>Product & 6-Digit VAN</th>
+                <th>Qty</th>
+                <th>Rate (₹)</th>
+                <th>GST (${Number(inv.gstPct) || 0}%)</th>
+                <th>Total (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>${escapeHtml(inv.product)}</strong><br>
+                  <small>VAN No: <b>${escapeHtml(inv.van)}</b> | Key: <b>${escapeHtml(inv.productKey)}</b></small>
+                </td>
+                <td>${Number(inv.qty) || 1}</td>
+                <td>₹${Number(inv.baseRate) || 0}</td>
+                <td>₹${Number(inv.gstAmt) || 0}</td>
+                <td><strong>₹${Number(inv.totalAmount) || 0}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="margin-bottom:8px;"><strong>Total Amount in Words:</strong> ${escapeHtml(inv.amountWords)}</div>
+          ${inv.note ? `<div style="background:#f5f5f5;padding:8px;border-radius:4px;margin-bottom:8px;"><strong>Customer Note:</strong> ${escapeHtml(inv.note)}</div>` : ''}
+
+          <div class="inv-renewal-box">
+            <strong>PLAN RENEWAL DATE: ${escapeHtml(inv.renewalDate)}</strong>
+          </div>
+
+          <div class="inv-terms">
+            <strong>Terms & Conditions:</strong><br>
+            ${escapeHtml(state.settings.terms || '').replace(/\n/g, '<br>')}
+          </div>
+
+          <div class="inv-footer-auto">
+            <span>WhatsApp Support: ${escapeHtml(waNum)}</span>
+            <span>Website: ${escapeHtml(webUrl)}</span>
+          </div>
+        </div>
+      `;
+
+      const actions = document.getElementById('bill-action-buttons');
+      actions.classList.remove('hidden');
+
+      const fillTpl = (tpl) => tpl
+        .replace(/\{name\}/g, inv.customerName)
+        .replace(/\{billNo\}/g, inv.billNo)
+        .replace(/\{product\}/g, inv.product)
+        .replace(/\{van\}/g, inv.van)
+        .replace(/\{key\}/g, inv.productKey)
+        .replace(/\{total\}/g, inv.totalAmount)
+        .replace(/\{renewal\}/g, inv.renewalDate)
+        .replace(/\{txn\}/g, inv.txnId)
+        .replace(/\{note\}/g, inv.note || 'None');
+
+      document.getElementById('bill-send-wa-btn').onclick = () => {
+        const msg = fillTpl(state.settings.waTemplate);
+        const ph = (inv.phone || '').replace(/\D/g, '');
+        window.open(`https://wa.me/${ph.length===10?'91'+ph:ph}?text=${encodeURIComponent(msg)}`, '_blank');
+      };
+      document.getElementById('bill-send-email-btn').onclick = () => {
+        const body = fillTpl(state.settings.emailTemplate);
+        window.open(`mailto:${inv.email}?subject=${encodeURIComponent('Invoice & License Key - ' + inv.billNo)}&body=${encodeURIComponent(body)}`, '_blank');
+      };
+    }
+
+    function numberToIndianWords(num) {
+      num = Math.round(Number(num) || 0);
+      if (num === 0) return 'Rupees Zero Only';
+      const a = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+      const b = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+      const two = (n) => n < 20 ? a[n] : b[Math.floor(n/10)] + (n%10 ? ' ' + a[n%10] : '');
+      const three = (n) => (Math.floor(n/100) ? a[Math.floor(n/100)] + ' Hundred ' : '') + two(n%100);
+      let out = '';
+      if (Math.floor(num/100000)) { out += two(Math.floor(num/100000)) + ' Lakh '; num %= 100000; }
+      if (Math.floor(num/1000)) { out += two(Math.floor(num/1000)) + ' Thousand '; num %= 1000; }
+      if (num > 0) out += three(num);
+      return 'Rupees ' + out.trim() + ' Only';
+    }
+
+    function addCustomAttrRow(k = '', v = '') {
+      const box = document.getElementById('custom-attrs-container');
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;';
+      row.innerHTML = `
+        <input class="ca-key" placeholder="Field Name (e.g. Model, Devices)" value="${escapeHtml(k)}" style="flex:1;min-width:130px;padding:7px;border:1px solid #ccc;border-radius:4px;">
+        <input class="ca-val" placeholder="Value (e.g. 3 PC / 2026)" value="${escapeHtml(v)}" style="flex:1;min-width:130px;padding:7px;border:1px solid #ccc;border-radius:4px;">
+        <button type="button" class="btn-red" onclick="this.parentElement.remove()">×</button>
+      `;
+      box.appendChild(row);
+    }
+
+    async function saveProduct() {
+      const van = document.getElementById('p-van').value.trim() || String(Math.floor(100000 + Math.random() * 900000));
+      const brand = document.getElementById('p-brand').value.trim();
+      const name = document.getElementById('p-name').value.trim();
+      if (!brand || !name) { alert('Brand and Product Name are required!'); return; }
+
+      const customAttrs = [];
+      document.querySelectorAll('#custom-attrs-container > div').forEach(r => {
+        const k = r.querySelector('.ca-key').value.trim();
+        const v = r.querySelector('.ca-val').value.trim();
+        if (k && v) customAttrs.push({ key: k, val: v });
+      });
+
+      const item = {
+        id: editingProductId || Date.now(),
+        van,
+        brand,
+        name,
+        category: document.getElementById('p-category').value.trim() || 'Antivirus',
+        brandBanner: document.getElementById('p-brand-banner').value.trim(),
+        price: Number(document.getElementById('p-price').value) || 0,
+        stock: Number(document.getElementById('p-stock').value) || 0,
+        badgeMode: document.getElementById('p-badge-mode').value,
+        os: document.getElementById('p-os').value.trim(),
+        years: document.getElementById('p-years').value,
+        variety: document.getElementById('p-variety').value.trim(),
+        image: document.getElementById('p-image').value.trim() || svgPlaceholder(name, '#1e293b', '#fff'),
+        desc: document.getElementById('p-desc').value.trim(),
+        customAttrs
+      };
+
+      if (editingProductId) {
+        const idx = state.products.findIndex(x => Number(x.id) === Number(editingProductId));
+        if (idx >= 0) state.products[idx] = item;
+      } else {
+        state.products.unshift(item);
+      }
+      await pushCatalogAndConfigToCloud(false);
+      clearProductForm();
+      renderInventoryTable();
+      alert('Product saved with 6-Digit VAN: ' + van);
+    }
+
+    function editProduct(id) {
+      const p = state.products.find(x => Number(x.id) === Number(id));
+      if (!p) return;
+      editingProductId = p.id;
+      document.getElementById('product-form-heading').innerText = 'Edit Product (VAN: ' + p.van + ')';
+      document.getElementById('save-product-btn').innerText = 'Update Product';
+      document.getElementById('p-van').value = p.van;
+      document.getElementById('p-brand').value = p.brand;
+      document.getElementById('p-name').value = p.name;
+      document.getElementById('p-category').value = p.category;
+      document.getElementById('p-brand-banner').value = p.brandBanner || '';
+      document.getElementById('p-price').value = p.price;
+      document.getElementById('p-stock').value = p.stock;
+      document.getElementById('p-badge-mode').value = p.badgeMode || 'auto';
+      document.getElementById('p-os').value = p.os || '';
+      document.getElementById('p-years').value = p.years || '1';
+      document.getElementById('p-variety').value = p.variety || '';
+      document.getElementById('p-image').value = p.image || '';
+      document.getElementById('p-desc').value = p.desc || '';
+      const box = document.getElementById('custom-attrs-container');
+      box.innerHTML = '';
+      (p.customAttrs || []).forEach(c => addCustomAttrRow(c.key, c.val));
+      document.getElementById('admin-inventory').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function clearProductForm() {
+      editingProductId = null;
+      document.getElementById('product-form-heading').innerText = 'Add / Edit Product (with 6-Digit VAN & Custom Fields)';
+      document.getElementById('save-product-btn').innerText = 'Save Product';
+      document.getElementById('p-van').value = String(Math.floor(100000 + Math.random() * 900000));
+      ['p-brand','p-name','p-category','p-brand-banner','p-price','p-os','p-variety','p-image','p-desc'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('p-stock').value = '5';
+      document.getElementById('p-badge-mode').value = 'auto';
+      document.getElementById('custom-attrs-container').innerHTML = '';
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm('Delete this product?')) return;
+      state.products = state.products.filter(x => Number(x.id) !== Number(id));
+      await pushCatalogAndConfigToCloud(false);
+      renderInventoryTable();
+    }
+
+    function renderInventoryTable() {
+      document.getElementById('admin-inventory-table').innerHTML = state.products.map(p => {
+        const b = getProductBadge(p);
+        return `
+          <tr>
+            <td><strong>${escapeHtml(p.van)}</strong></td>
+            <td><b>${escapeHtml(p.brand)}</b><br>${escapeHtml(p.name)}</td>
+            <td>${escapeHtml(p.category)}</td>
+            <td>${escapeHtml(p.os || '-')} | ${escapeHtml(p.years)} Yr | ${escapeHtml(p.variety || '-')}</td>
+            <td>₹${Number(p.price) || 0}</td>
+            <td><span class="badge-status ${b.cls}">${escapeHtml(b.text)}</span></td>
+            <td>
+              <button type="button" class="btn-blue" onclick="editProduct(${Number(p.id)})">Edit</button>
+              <button type="button" class="btn-red" onclick="deleteProduct(${Number(p.id)})">Del</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function createAgent() {
+      const name = document.getElementById('ag-name').value.trim();
+      const phone = document.getElementById('ag-phone').value.trim();
+      const username = document.getElementById('ag-user').value.trim();
+      const password = document.getElementById('ag-pass').value.trim();
+      if (!name || !username || !password) { alert('Name, Username/Email & Password are required!'); return; }
+      const agId = 'ag-' + Date.now();
+      const agDoc = { id: agId, name, phone, username, password, blocked: false };
+      state.agents.push(agDoc);
+      saveLocalState();
+      if (firebaseReady && db) {
+        try { await db.collection('agents').doc(agId).set(agDoc); } catch (e) {}
+      }
+      ['ag-name','ag-phone','ag-user','ag-pass'].forEach(id => document.getElementById(id).value = '');
+      renderAgentsTable();
+      alert('Agent saved!');
+    }
+
+    async function toggleBlockAgent(id) {
+      const ag = state.agents.find(x => x.id === id);
+      if (!ag) return;
+      ag.blocked = !ag.blocked;
+      saveLocalState();
+      if (firebaseReady && db) {
+        try { await db.collection('agents').doc(id).set({ blocked: ag.blocked }, { merge: true }); } catch (e) {}
+      }
+      renderAgentsTable();
+    }
+
+    function renderAgentsTable() {
+      document.getElementById('admin-agents-table').innerHTML = state.agents.map(a => `
+        <tr>
+          <td><strong>${escapeHtml(a.name)}</strong></td>
+          <td>${escapeHtml(a.phone)}</td>
+          <td><code>${escapeHtml(a.username)}</code></td>
+          <td><strong style="color:${a.blocked?'red':'green'}">${a.blocked ? 'BLOCKED' : 'ACTIVE'}</strong></td>
+          <td>
+            <button type="button" class="${a.blocked?'btn-green':'btn-red'}" onclick="toggleBlockAgent('${escapeJsStr(a.id)}')">
+              ${a.blocked ? 'Unblock Agent' : 'Block Agent'}
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderLayoutAdmin() {
+      document.getElementById('lay-biz-name').value = state.layout.bizName;
+      document.getElementById('lay-show-search').value = state.layout.showSearch;
+      document.getElementById('lay-note-size').value = state.layout.noteSize;
+      document.getElementById('lay-note-bg').value = state.layout.noteBg;
+      document.getElementById('lay-note-color').value = state.layout.noteColor;
+      document.getElementById('lay-note-lines').value = (state.layout.noteLines || []).join('\n');
+
+      document.getElementById('admin-left-menu-table').innerHTML = state.layout.leftMenu.map((m, idx) => `
+        <tr>
+          <td><strong>${escapeHtml(m.label)}</strong></td>
+          <td>${escapeHtml(m.type)}</td>
+          <td><button type="button" class="btn-red" onclick="removeLeftMenu(${idx})">Remove</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function saveHeaderAndNote() {
+      state.layout.bizName = document.getElementById('lay-biz-name').value.trim() || 'OM SAI ENTERPRISES';
+      state.layout.showSearch = document.getElementById('lay-show-search').value;
+      state.layout.noteSize = Number(document.getElementById('lay-note-size').value) || 14;
+      state.layout.noteBg = document.getElementById('lay-note-bg').value;
+      state.layout.noteColor = document.getElementById('lay-note-color').value;
+      state.layout.noteLines = document.getElementById('lay-note-lines').value.split('\n').map(x => x.trim()).filter(Boolean);
+      await pushCatalogAndConfigToCloud(true);
+    }
+
+    async function addLeftMenuItem() {
+      const label = document.getElementById('new-menu-label').value.trim();
+      const type = document.getElementById('new-menu-type').value;
+      if (!label) return;
+      state.layout.leftMenu.push({ id: 'm-' + Date.now(), label: label.toUpperCase(), type, value: label });
+      document.getElementById('new-menu-label').value = '';
+      await pushCatalogAndConfigToCloud(false);
+      renderLayoutAdmin();
+    }
+
+    async function removeLeftMenu(idx) {
+      state.layout.leftMenu.splice(idx, 1);
+      await pushCatalogAndConfigToCloud(false);
+      renderLayoutAdmin();
+    }
+
+    function toggleMediaFields() {
+      const t = document.getElementById('media-type').value;
+      document.getElementById('media-urls-wrap').style.display = ['banner','card','mini'].includes(t) ? 'block' : 'none';
+      document.getElementById('media-video-wrap').style.display = t === 'video' ? 'block' : 'none';
+    }
+
+    function detectMediaImageSizes() {
+      const urls = document.getElementById('media-urls').value.split('\n').map(u => u.trim()).filter(Boolean);
+      const box = document.getElementById('detected-sizes-box');
+      if (!urls.length) { box.innerHTML = ''; return; }
+      box.innerHTML = 'Checking exact image dimensions...';
+      const results = [];
+      urls.forEach((u, i) => {
+        const img = new Image();
+        img.onload = () => { results[i] = `Image ${i+1}: ${img.naturalWidth} × ${img.naturalHeight} px`; box.innerHTML = results.filter(Boolean).join(' | '); };
+        img.onerror = () => { results[i] = `Image ${i+1}: Unable to load size`; box.innerHTML = results.filter(Boolean).join(' | '); };
+        img.src = u;
+      });
+    }
+
+    async function saveMediaItem() {
+      const type = document.getElementById('media-type').value;
+      const title = document.getElementById('media-title').value.trim();
+      const urls = document.getElementById('media-urls').value.split('\n').map(u => u.trim()).filter(Boolean);
+      const videoUrl = document.getElementById('media-video-url').value.trim();
+      const target = document.getElementById('media-target').value.trim();
+      if (!title && !urls.length && !videoUrl) { alert('Please fill title or URL!'); return; }
+
+      state.media.push({ id: 'md-' + Date.now(), type, title, urls, videoUrl, target });
+      await pushCatalogAndConfigToCloud(false);
+      document.getElementById('media-title').value = '';
+      document.getElementById('media-urls').value = '';
+      document.getElementById('media-video-url').value = '';
+      document.getElementById('detected-sizes-box').innerHTML = '';
+      renderMediaAdminList();
+      renderPromoBlocksOnce();
+      renderSlidesOnly();
+      alert('Media item saved & synced!');
+    }
+
+    function renderMediaAdminList() {
+      document.getElementById('admin-media-list').innerHTML = state.media.map((m, idx) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #eee;gap:10px;">
+          <div>
+            <span class="p-tag" style="text-transform:uppercase;">${escapeHtml(m.type)}</span>
+            <strong>${escapeHtml(m.title || 'Media Item')}</strong>
+            <div style="font-size:12px;color:#666;">${m.urls.length ? m.urls.length + ' image(s)' : escapeHtml(m.videoUrl || '')}</div>
+          </div>
+          <button type="button" class="btn-red" onclick="deleteMediaItem(${idx})">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    async function deleteMediaItem(idx) {
+      state.media.splice(idx, 1);
+      await pushCatalogAndConfigToCloud(false);
+      renderMediaAdminList();
+      renderPromoBlocksOnce();
+      renderSlidesOnly();
+    }
+
+    function renderSettingsAdmin() {
+      const grid = document.getElementById('store-settings-grid');
+      grid.innerHTML = Object.entries(state.settings.fields).map(([key, f]) => `
+        <div class="form-group">
+          <label>${escapeHtml(f.label)}</label>
+          <input id="sf-val-${escapeHtml(key)}" value="${escapeHtml(f.value || '')}">
+          <div class="toggle-row">
+            <span>Show on Website & Bill</span>
+            <input type="checkbox" id="sf-show-${escapeHtml(key)}" ${f.show ? 'checked' : ''} style="width:auto;">
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('set-upi-id').value = state.settings.upiId || '';
+      document.getElementById('set-upi-name').value = state.settings.upiName || '';
+      document.getElementById('set-install-online').value = state.settings.installOnline || 299;
+      document.getElementById('set-install-visit').value = state.settings.installVisit || 400;
+      document.getElementById('set-gst-rate').value = state.settings.gstRate || 18;
+      document.getElementById('set-terms').value = state.settings.terms || '';
+      document.getElementById('tpl-wa-bill').value = state.settings.waTemplate || '';
+      document.getElementById('tpl-email-bill').value = state.settings.emailTemplate || '';
+    }
+
+    async function saveStoreSettings() {
+      Object.keys(state.settings.fields).forEach(key => {
+        state.settings.fields[key].value = document.getElementById('sf-val-' + key).value.trim();
+        state.settings.fields[key].show = document.getElementById('sf-show-' + key).checked;
+      });
+      state.settings.upiId = document.getElementById('set-upi-id').value.trim();
+      state.settings.upiName = document.getElementById('set-upi-name').value.trim();
+      state.settings.installOnline = Number(document.getElementById('set-install-online').value) || 299;
+      state.settings.installVisit = Number(document.getElementById('set-install-visit').value) || 400;
+      state.settings.gstRate = Number(document.getElementById('set-gst-rate').value) || 18;
+      state.settings.terms = document.getElementById('set-terms').value;
+      await pushCatalogAndConfigToCloud(true);
+    }
+
+    async function saveTemplates() {
+      state.settings.waTemplate = document.getElementById('tpl-wa-bill').value;
+      state.settings.emailTemplate = document.getElementById('tpl-email-bill').value;
+      await pushCatalogAndConfigToCloud(true);
+    }
+
+    function renderAgentPortal(agentObj = null) {
+      let ag = agentObj;
+      if (!ag && currentAuthRole && currentAuthRole.startsWith('agent:')) {
+        const agId = currentAuthRole.split(':')[1];
+        ag = state.agents.find(x => x.id === agId);
+      }
+      if (!ag) return;
+      document.getElementById('agent-welcome-title').innerText = `Welcome, ${ag.name}`;
+      const jobs = state.orders.filter(o => o.assignedAgentId === ag.id);
+      const tb = document.getElementById('agent-tasks-table');
+      if (!jobs.length) {
+        tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#666;">No installations assigned to you yet.</td></tr>';
+        return;
+      }
+      tb.innerHTML = jobs.map(j => {
+        const inv = state.invoices.find(x => x.billNo === j.billNo);
+        return `
+          <tr>
+            <td><strong>${escapeHtml(j.customerName)}</strong><br>📱 ${escapeHtml(j.phone)}<br>📍 <small>${escapeHtml(j.address)}</small></td>
+            <td><b>${escapeHtml(j.productName)}</b><br>VAN: ${escapeHtml(j.van)}<br>${inv ? `Key: <code>${escapeHtml(inv.productKey)}</code>` : '<small>Key pending from Admin</small>'}</td>
+            <td>${escapeHtml(j.installMode)}</td>
+            <td><strong style="color:${j.status==='Completed'?'green':'#d97706'}">${escapeHtml(j.status)}</strong></td>
+            <td>
+              ${j.status === 'Completed'
+                ? `<span style="color:green;font-weight:700;">✅ Done</span>`
+                : `<input type="file" accept="image/*" onchange="agentUploadProof('${escapeJsStr(j.id)}', event)" style="margin-bottom:6px;font-size:12px;"><br>
+                   <button type="button" class="btn-green" onclick="agentMarkDone('${escapeJsStr(j.id)}')">✅ Installation Done</button>`}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function agentUploadProof(orderId, e) {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const compressed = await compressScreenshotToCompactDataUrl(f);
+      const o = state.orders.find(x => x.id === orderId);
+      if (o) {
+        o.completionScreenshot = compressed;
+        await saveOrderDoc(o);
+      }
+    }
+
+    async function agentMarkDone(orderId) {
+      const o = state.orders.find(x => x.id === orderId);
+      if (!o) return;
+      if (!o.completionScreenshot) {
+        alert('Please upload the installation completion screenshot first!');
+        return;
+      }
+      o.status = 'Completed';
+      await saveOrderDoc(o);
+      renderAgentPortal();
+      alert('Installation marked as DONE and proof screenshot synced!');
+    }
+
+    function downloadFullBackup() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'OmSai_Full_Backup_' + new Date().toISOString().slice(0,10) + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function restoreFullBackup(e) {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = async () => {
+        try {
+          const parsed = JSON.parse(String(r.result));
+          if (!parsed.settings || !parsed.layout || !Array.isArray(parsed.products)) {
+            alert('Invalid backup JSON file!');
+            return;
+          }
+          state = { ...state, ...parsed };
+          await pushCatalogAndConfigToCloud(true);
+          renderAllAdmin();
+          renderStorefront();
+        } catch (err) {
+          alert('Could not read JSON file: ' + err.message);
+        }
+      };
+      r.readAsText(f);
+    }
+
+    function exportExcel() {
+      const ws = XLSX.utils.json_to_sheet(state.products);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+      XLSX.writeFile(wb, 'OmSai_Inventory_VAN.xlsx');
+    }
+
+    function importExcel(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        rows.forEach((r, idx) => {
+          const pName = r.name || 'Product';
+          state.products.unshift({
+            id: Date.now() + idx,
+            van: String(r.van || Math.floor(100000 + Math.random() * 900000)),
+            brand: r.brand || 'Brand',
+            name: pName,
+            category: r.category || 'Antivirus',
+            price: Number(r.price) || 0,
+            stock: Number(r.stock) || 0,
+            badgeMode: 'auto',
+            os: r.os || 'Windows',
+            years: String(r.years || '1'),
+            variety: r.variety || 'Standard',
+            image: r.image || svgPlaceholder(pName, '#1e293b', '#fff'),
+            desc: r.desc || '',
+            customAttrs: []
+          });
+        });
+        await pushCatalogAndConfigToCloud(true);
+        renderInventoryTable();
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    window.onload = function() {
+      clearProductForm();
+      renderStorefront();
+      initFirebase();
+
+      setInterval(() => {
+        activeSlideIdx++;
+        activeNoteIdx++;
+        const lines = state.layout.noteLines || [];
+        if (lines.length) {
+          document.getElementById('note-ticker-text').innerText = lines[activeNoteIdx % lines.length];
+        }
+        renderSlidesOnly();
+      }, 4500);
+    };
+  </script>
+</body>
+</html>
