@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SecureTech - Antivirus Store</title>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* ================= GLOBAL STYLES ================= */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background: #fff; color: #111; overflow-x: hidden; }
+    a { text-decoration: none; color: inherit; }
+    button { cursor: pointer; font-family: inherit; outline: none; }
+    html { scroll-behavior: smooth; }
+    ::-webkit-scrollbar { display: none; }
+    * { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* ================= FRONTEND ================= */
+    #website-view { display: block; }
+    header { background: #111; color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; position: sticky; top: 0; z-index: 100; }
+    .menu-icon, .search-icon { font-size: 24px; cursor: pointer; }
+    .logo { font-size: 20px; font-weight: 900; letter-spacing: 1px; }
+
+    /* Sidebar */
+    .sidebar { position: fixed; top: 0; left: -100%; width: 85%; max-width: 350px; height: 100vh; background: #111; color: #fff; z-index: 200; transition: 0.3s ease-in-out; overflow-y: auto; }
+    .sidebar.active { left: 0; }
+    .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.5); z-index: 150; display: none; opacity: 0; transition: opacity 0.3s; }
+    .sidebar-overlay.active { display: block; opacity: 1; }
+    .sidebar-top { display: flex; justify-content: space-between; padding: 20px; border-bottom: 1px solid #333; font-weight: bold; font-size: 14px; }
+    .sidebar-links { list-style: none; padding: 20px; }
+    .sidebar-links li { padding: 15px 0; font-size: 16px; font-weight: 500; letter-spacing: 1px; border-bottom: 1px solid #222; }
+    .sidebar-links li.red-text a { color: #ff0000; }
+
+    /* Hero */
+    .hero { position: relative; width: 100%; height: 400px; background: url('https://images.unsplash.com/photo-1552346154-21d32810aba3?q=80&w=800') center/cover; display: flex; flex-direction: column; justify-content: flex-end; padding: 30px 20px; color: #fff; }
+    .hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); }
+    .hero h2 { position: relative; z-index: 1; font-size: 26px; text-transform: uppercase; font-weight: 900; line-height: 1.2; }
+
+    /* Sections */
+    .section { padding: 30px 20px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .section-title { font-size: 22px; font-weight: 900; text-transform: uppercase; }
+    .product-scroll { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x mandatory; }
+    .product-card { min-width: 200px; flex: 0 0 auto; background: #f9f9f9; padding: 15px; border-radius: 8px; position: relative; cursor: pointer; transition: transform 0.2s; scroll-snap-align: start; }
+    .product-card:active { transform: scale(0.98); }
+    .product-img { width: 100%; height: 140px; object-fit: contain; margin-bottom: 15px; background: #fff; border-radius: 5px; padding: 10px; }
+    .product-brand { font-size: 11px; color: #777; text-transform: uppercase; margin-bottom: 5px; }
+    .product-name { font-size: 14px; font-weight: bold; margin-bottom: 5px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+    .product-price { font-size: 16px; font-weight: bold; }
+
+    .category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .cat-card { background: #f5f5f5; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; height: 160px; border-radius: 8px; }
+    .cat-card img { width: 100%; height: 80px; object-fit: contain; }
+    .cat-card .cat-name { font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Footer & Social */
+    .footer { background: #111; color: #fff; padding: 40px 20px; }
+    .footer h3 { margin-bottom: 15px; font-size: 16px; display: flex; align-items: center; gap: 10px; color: #00d4ff; }
+    .footer-links { list-style: none; margin-bottom: 20px; }
+    .footer-links li { margin-bottom: 12px; font-size: 13px; color: #aaa; }
+    
+    .social-icons { display: flex; gap: 15px; margin-top: 15px; }
+    .social-icons a { background: #222; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 18px; transition: 0.3s; text-decoration: none; color: #fff; }
+    .social-icons a:hover { background: #00d4ff; color: #111; }
+
+    /* ================= PRODUCT DETAIL PAGE ================= */
+    #product-detail-view { display: none; background: #fff; min-height: 100vh; }
+    .detail-header { background: #111; color: #fff; display: flex; align-items: center; padding: 15px 20px; gap: 15px; position: sticky; top: 0; z-index: 100; }
+    .back-btn { font-size: 24px; background: none; border: none; color: white; }
+    .detail-content { padding: 20px; padding-bottom: 120px; }
+    .detail-img-container { width: 100%; height: 300px; background: #f5f5f5; display: flex; justify-content: center; align-items: center; border-radius: 10px; margin-bottom: 20px; }
+    .detail-img-container img { max-width: 80%; max-height: 80%; object-fit: contain; }
+    .detail-brand { font-size: 12px; color: #777; text-transform: uppercase; margin-bottom: 8px; }
+    .detail-name { font-size: 22px; font-weight: 900; line-height: 1.2; margin-bottom: 15px; }
+    .price-box { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
+    .price-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #555; }
+    .price-row.total { border-top: 1px dashed #ccc; padding-top: 10px; margin-top: 5px; font-size: 18px; font-weight: 900; color: #000; }
+    .detail-reviews { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 13px; }
+    .stars { color: #f5c518; font-size: 16px; }
+    .detail-tabs { display: flex; border-bottom: 1px solid #eee; margin-bottom: 15px; }
+    .d-tab { padding: 10px 15px; font-weight: bold; font-size: 14px; cursor: pointer; color: #777; }
+    .d-tab.active { color: #000; border-bottom: 2px solid #000; margin-bottom: -1px; }
+    .tab-content { display: none; font-size: 14px; color: #444; line-height: 1.6; }
+    .tab-content.active { display: block; }
+    .feature-list { list-style: none; }
+    .feature-list li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; display: flex; align-items: flex-start; gap: 10px; font-size: 14px; }
+    .feature-list li::before { content: '✔'; color: #28a745; font-weight: bold; margin-top: 2px; }
+    .detail-actions { position: fixed; bottom: 0; left: 0; width: 100%; padding: 15px 20px; background: #fff; border-top: 1px solid #eee; display: flex; gap: 10px; z-index: 100; }
+    .btn-buy { flex: 1; padding: 15px; background: #111; color: #fff; border: none; font-weight: bold; font-size: 16px; border-radius: 5px; }
+
+    /* ================= ADMIN PANEL ================= */
+    #admin-view { display: none; background: #f4f4f9; min-height: 100vh; }
+    .admin-layout { display: flex; min-height: 100vh; }
+    .admin-sidebar { width: 250px; background: #111; color: #fff; padding: 20px; flex-shrink: 0; display: flex; flex-direction: column; gap: 5px; }
+    .admin-sidebar h2 { font-size: 16px; margin-bottom: 20px; color: #ff0000; letter-spacing: 1px; }
+    .admin-menu-btn { display: block; width: 100%; text-align: left; background: none; border: none; color: #aaa; padding: 12px 15px; font-size: 14px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+    .admin-menu-btn:hover, .admin-menu-btn.active { background: #222; color: #fff; }
+    .admin-main { flex: 1; padding: 20px; overflow-y: auto; }
+    .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .admin-header h1 { font-size: 20px; }
+    .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .card h3 { margin-bottom: 15px; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    .btn { background: #111; color: #fff; padding: 10px 20px; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 14px; }
+    .btn:active { background: #333; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
+    th { background: #f9f9f9; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #555; }
+    .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+
+    .toggle-view-btn { position: fixed; bottom: 20px; right: 20px; background: #ff0000; color: #fff; padding: 12px 20px; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-size: 14px; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; padding: 20px; }
+    .modal.active { display: flex; }
+    .modal-content { background: #fff; width: 100%; max-width: 400px; padding: 20px; border-radius: 8px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
+
+    @media (max-width: 768px) {
+      .admin-layout { flex-direction: column; }
+      .admin-sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 10px; }
+      .admin-sidebar h2 { display: none; }
+      .admin-menu-btn { white-space: nowrap; text-align: center; }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= CUSTOMER WEBSITE ================= -->
+  <div id="website-view">
+    <header>
+      <div class="menu-icon" onclick="toggleMenu()">☰</div>
+      <div class="logo">SECURE-TECH</div>
+      <div style="display: flex; gap: 15px;"><div class="search-icon">🔍</div></div>
+    </header>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMenu()"></div>
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-top"><span>👤 LOG IN</span><span>♡ WISHLIST</span></div>
+      <ul class="sidebar-links">
+        <li><a href="#">NEW ARRIVALS</a></li>
+        <li><a href="#">ANTIVIRUS</a></li>
+        <li><a href="#">MAC / APPLE</a></li>
+        <li><a href="#">ANDROID SECURITY</a></li>
+        <li><a href="#">BRANDS</a></li>
+        <li class="red-text"><a href="#">OFFERS</a></li>
+      </ul>
+    </div>
+
+    <div class="hero">
+      <h2>PROTECT YOUR PC<br>WITH PREMIUM SECURITY</h2>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-title">TOP ANTIVIRUS</div></div>
+      <div class="product-scroll" id="frontend-products"></div>
+    </div>
+
+    <div class="section" style="background: #fafafa;">
+      <div class="section-title" style="margin-bottom: 20px;">POPULAR BRANDS</div>
+      <div class="category-grid">
+        <div class="cat-card"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/McAfee_logo_2017.svg/512px-McAfee_logo_2017.svg.png" alt="McAfee"><div class="cat-name">McAfee <span>→</span></div></div>
+        <div class="cat-card"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Quick_Heal_logo.svg/512px-Quick_Heal_logo.svg.png" alt="Quick Heal"><div class="cat-name">Quick Heal <span>→</span></div></div>
+        <div class="cat-card"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Avast_Software_logo.svg/512px-Avast_Software_logo.svg.png" alt="Avast"><div class="cat-name">Avast <span>→</span></div></div>
+        <div class="cat-card"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Norton_Lifelock_logo.svg/512px-Norton_Lifelock_logo.svg.png" alt="Norton"><div class="cat-name">Norton <span>→</span></div></div>
+      </div>
+    </div>
+
+    <!-- DYNAMIC FOOTER -->
+    <div class="footer">
+      <h3>📞 GET IN TOUCH</h3>
+      <p style="font-size: 13px; margin-bottom: 15px;" id="footer-contact">WhatsApp: +91 9876543210 | GST: 27XXXXX1234X1Z5</p>
+      <p style="font-size: 13px; margin-bottom: 20px;" id="footer-address">Shop No. 12, IT Plaza, Mumbai</p>
+      
+      <div style="display: flex; gap: 30px;">
+        <!-- Quick Links -->
+        <div style="flex: 1;">
+          <h3>INFORMATION</h3>
+          <ul class="footer-links">
+            <li onclick="alert('About Us:\n' + (storeSettings.aboutUs || 'Not available'))" style="cursor:pointer;">ABOUT US</li>
+            <li onclick="alert('FAQ:\n' + (storeSettings.faq || 'Not available'))" style="cursor:pointer;">FAQ</li>
+            <li onclick="alert('Privacy Policy:\n' + (storeSettings.privacyPolicy || 'Not available'))" style="cursor:pointer;">PRIVACY POLICY</li>
+            <li onclick="alert('Return & Exchange:\n' + (storeSettings.returnPolicy || 'Not available'))" style="cursor:pointer;">RETURN & EXCHANGE</li>
+            <li onclick="alert('Bulk / Corporate:\n' + (storeSettings.bulkOrder || 'Not available'))" style="cursor:pointer;">BULK / CORPORATE</li>
+          </ul>
+        </div>
+        <!-- Social Media -->
+        <div style="flex: 1;">
+          <h3>SOCIAL MEDIA</h3>
+          <div class="social-icons">
+            <a id="social-instagram" href="#" target="_blank" title="Instagram">📸</a>
+            <a id="social-facebook" href="#" target="_blank" title="Facebook">📘</a>
+            <a id="social-youtube" href="#" target="_blank" title="YouTube">▶️</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PRODUCT DETAIL PAGE ================= -->
+  <div id="product-detail-view">
+    <div class="detail-header">
+      <button class="back-btn" onclick="closeProductDetail()">←</button>
+      <div class="logo" style="font-size: 16px;">PRODUCT DETAILS</div>
+    </div>
+    
+    <div class="detail-content">
+      <div class="detail-img-container"><img id="detail-img" src="" alt="Product"></div>
+      <div class="detail-brand" id="detail-brand">BRAND</div>
+      <div class="detail-name" id="detail-name">Product Name</div>
+      
+      <div class="price-box">
+        <div class="price-row"><span>Antivirus Price:</span><span id="detail-price">₹0</span></div>
+        <div class="price-row"><span>Installation Charge:</span><span id="detail-install-charge">₹0</span></div>
+        <div class="price-row total"><span>Total Payable:</span><span id="detail-total-price">₹0</span></div>
+      </div>
+      
+      <div class="detail-reviews"><span class="stars">★★★★☆</span><span>4.5 (120 Reviews)</span></div>
+      
+      <div class="detail-tabs">
+        <div class="d-tab active" onclick="switchDetailTab('desc')">Description</div>
+        <div class="d-tab" onclick="switchDetailTab('features')">Features</div>
+      </div>
+      
+      <div id="tab-desc" class="tab-content active"><p id="detail-desc-text">Loading...</p></div>
+      <div id="tab-features" class="tab-content"><ul class="feature-list" id="detail-features-list"></ul></div>
+    </div>
+    
+    <div class="detail-actions">
+      <button class="btn-buy" onclick="openBookingModal()">Book Installation</button>
+    </div>
+  </div>
+
+  <!-- ================= ADMIN PANEL ================= -->
+  <div id="admin-view">
+    <div class="admin-layout">
+      <div class="admin-sidebar">
+        <h2>SECURE-TECH ADMIN</h2>
+        <button class="admin-menu-btn active" onclick="switchAdminTab('dashboard', this)">📊 Dashboard</button>
+        <button class="admin-menu-btn" onclick="switchAdminTab('settings', this)">⚙️ Store Settings</button>
+        <button class="admin-menu-btn" onclick="switchAdminTab('footer', this)">📄 Footer & Pages</button>
+        <button class="admin-menu-btn" onclick="switchAdminTab('firebase', this)">🔥 Firebase Setup</button>
+      </div>
+
+      <div class="admin-main">
+        
+        <!-- 1. DASHBOARD -->
+        <div id="admin-dashboard" class="admin-section">
+          <div class="admin-header"><h1>Dashboard Overview</h1></div>
+          <div class="card">
+            <h3>Live Store Data</h3>
+            <p><b>Store Name:</b> <span id="admin-dash-name">Loading...</span></p>
+            <p><b>Contact:</b> <span id="admin-dash-whatsapp">Loading...</span></p>
+            <p><b>Installation Charge:</b> <span id="admin-dash-install-charge">Loading...</span></p>
+          </div>
+          <div class="card">
+            <h3>Recent Bookings (Live)</h3>
+            <table>
+              <thead><tr><th>Customer</th><th>Contact</th><th>Product</th></tr></thead>
+              <tbody id="admin-booking-list"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. STORE SETTINGS -->
+        <div id="admin-settings" class="admin-section" style="display: none;">
+          <div class="admin-header"><h1>Store Settings</h1></div>
+          <div class="card">
+            <h3>Business Details</h3>
+            <div class="form-grid">
+              <div class="form-group"><label>Store Name</label><input type="text" id="s-name"></div>
+              <div class="form-group"><label>WhatsApp Number</label><input type="text" id="s-whatsapp"></div>
+              <div class="form-group"><label>UPI ID</label><input type="text" id="s-upi"></div>
+              <div class="form-group"><label>Installation Charge (₹)</label><input type="number" id="s-install-charge"></div>
+              <div class="form-group"><label>GST Number</label><input type="text" id="s-gst"></div>
+              <div class="form-group"><label>Store Address</label><input type="text" id="s-address"></div>
+            </div>
+            <br>
+            <button class="btn" onclick="saveSettingsToDB()" id="saveBtn">Save Settings Live</button>
+          </div>
+        </div>
+
+        <!-- 3. FOOTER & PAGES SETTINGS -->
+        <div id="admin-footer" class="admin-section" style="display: none;">
+          <div class="admin-header"><h1>Footer Pages & Social Media</h1></div>
+          <div class="card">
+            <h3>Policy Pages Content</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>About Us</label>
+                <textarea id="f-about"></textarea>
+              </div>
+              <div class="form-group">
+                <label>FAQ</label>
+                <textarea id="f-faq"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Privacy Policy</label>
+                <textarea id="f-privacy"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Return & Exchange Policy</label>
+                <textarea id="f-return"></textarea>
+              </div>
+              <div class="form-group" style="grid-column: span 2;">
+                <label>Bulk / Corporate Order Info</label>
+                <textarea id="f-bulk"></textarea>
+              </div>
+            </div>
+            <br>
+            <button class="btn" onclick="saveFooterToDB()" id="saveFooterBtn">Save Pages Data</button>
+          </div>
+
+          <div class="card">
+            <h3>Social Media Links</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Instagram Link</label>
+                <input type="url" id="f-insta" placeholder="https://instagram.com/yourpage">
+              </div>
+              <div class="form-group">
+                <label>Facebook Link</label>
+                <input type="url" id="f-fb" placeholder="https://facebook.com/yourpage">
+              </div>
+              <div class="form-group">
+                <label>YouTube Link</label>
+                <input type="url" id="f-yt" placeholder="https://youtube.com/yourchannel">
+              </div>
+            </div>
+            <br>
+            <button class="btn" onclick="saveSocialToDB()" id="saveSocialBtn">Save Social Links</button>
+          </div>
+        </div>
+
+        <!-- 4. FIREBASE -->
+        <div id="admin-firebase" class="admin-section" style="display: none;">
+          <div class="admin-header"><h1>Firebase Live Database</h1></div>
+          <div class="card">
+            <h3>Database Status</h3>
+            <p>Website is connected to Firebase Firestore. Any data you update here will be saved in the cloud and will reflect on all user devices instantly.</p>
+            <br>
+            <div style="padding: 15px; background: #e6f4ea; border-radius: 5px; border: 1px solid #28a745;">
+              <strong style="color: #1e8e3e;">✅ Firebase is Active</strong><br>
+              <span style="font-size: 13px; color: #555;">Your data is saved securely in real-time.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- BOOKING MODAL -->
+  <div class="modal" id="booking-modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>Book Installation</h2><button class="close-btn" onclick="closeBookingModal()">×</button></div>
+      <form onsubmit="confirmBooking(event)">
+        <div class="form-group" style="margin-bottom: 10px;"><label>Your Name</label><input type="text" id="book-name" required placeholder="Enter Full Name"></div>
+        <div class="form-group" style="margin-bottom: 15px;"><label>WhatsApp Number</label><input type="tel" id="book-phone" required placeholder="Enter 10-digit number"></div>
+        <div style="background: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-weight: bold; display: flex; justify-content: space-between;">
+          <span>Total Amount:</span> <span id="modal-total-amount">₹0</span>
+        </div>
+        <button type="submit" class="btn" style="width: 100%; padding: 15px; font-size: 16px;">Confirm Booking</button>
+      </form>
+    </div>
+  </div>
+
+  <button class="toggle-view-btn" onclick="toggleView()" id="toggleBtn">⚙️ Admin</button>
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    // 🔴 YAHAN APNA FIREBASE CONFIG DAALEIN 🔴
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    let db;
+    let isFirebaseReady = false;
+    try {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      isFirebaseReady = true;
+    } catch (e) {
+      console.log("Firebase config missing. Running in Offline Mode.");
+    }
+
+    // Default Data
+    let storeSettings = { 
+      name: "SecureTech Antivirus", 
+      whatsapp: "+91 9876543210", 
+      upi: "securetech@upi", 
+      installCharge: 250,
+      gst: "27XXXXX1234X1Z5",
+      address: "Shop No. 12, IT Plaza, Mumbai",
+      aboutUs: "We are a trusted antivirus dealer since 2010.",
+      faq: "Q: Do you provide home installation? A: Yes, free installation.",
+      privacyPolicy: "We do not share your personal data with third parties.",
+      returnPolicy: "7 days return policy for unused license keys.",
+      bulkOrder: "For 10+ licenses, contact us on WhatsApp for corporate discounts.",
+      insta: "https://instagram.com",
+      fb: "https://facebook.com",
+      yt: "https://youtube.com"
+    };
+
+    let products = [
+      { id: 1, brand: "McAfee", name: "Total Protection 2024", price: 999, desc: "McAfee Total Protection provides comprehensive security.", features: ["1 Device, 1 Year", "Ransomware Protection"], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/McAfee_logo_2017.svg/512px-McAfee_logo_2017.svg.png" },
+      { id: 2, brand: "Quick Heal", name: "Total Security 2024", price: 1499, desc: "Quick Heal Total Security is the perfect blend.", features: ["3 Devices, 1 Year", "Safe Banking"], image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Quick_Heal_logo.svg/512px-Quick_Heal_logo.svg.png" }
+    ];
+    let bookings = [];
+    let currentProductId = null;
+
+    // ================= FIREBASE SYNC =================
+    
+    function fetchSettings() {
+      if(!isFirebaseReady) { syncSettingsUI(); return; }
+      
+      // Fetch Store Settings
+      db.collection("settings").doc("store").onSnapshot((doc) => {
+        if (doc.exists) { storeSettings = { ...storeSettings, ...doc.data() }; }
+        syncSettingsUI();
+        renderFrontend();
+      });
+
+      // Fetch Footer Settings
+      db.collection("settings").doc("footer").onSnapshot((doc) => {
+        if (doc.exists) { storeSettings = { ...storeSettings, ...doc.data() }; }
+        syncFooterUI();
+      });
+    }
+
+    function saveSettingsToDB() {
+      const btn = document.getElementById('saveBtn');
+      btn.innerText = "Saving...";
+
+      storeSettings = {
+        ...storeSettings,
+        name: document.getElementById('s-name').value,
+        whatsapp: document.getElementById('s-whatsapp').value,
+        upi: document.getElementById('s-upi').value,
+        installCharge: Number(document.getElementById('s-install-charge').value),
+        gst: document.getElementById('s-gst').value,
+        address: document.getElementById('s-address').value
+      };
+
+      if(isFirebaseReady) {
+        db.collection("settings").doc("store").set(storeSettings).then(() => {
+          alert("Settings Saved Live to Firebase!");
+          btn.innerText = "Save Settings Live";
+        });
+      } else {
+        alert("Firebase connect nahi hai. Offline save hua.");
+        syncSettingsUI();
+        btn.innerText = "Save Settings Live";
+      }
+    }
+
+    function saveFooterToDB() {
+      const btn = document.getElementById('saveFooterBtn');
+      btn.innerText = "Saving...";
+      
+      const footerData = {
+        aboutUs: document.getElementById('f-about').value,
+        faq: document.getElementById('f-faq').value,
+        privacyPolicy: document.getElementById('f-privacy').value,
+        returnPolicy: document.getElementById('f-return').value,
+        bulkOrder: document.getElementById('f-bulk').value
+      };
+
+      storeSettings = { ...storeSettings, ...footerData };
+
+      if(isFirebaseReady) {
+        db.collection("settings").doc("footer").set(footerData, { merge: true }).then(() => {
+          alert("Pages Content Saved Live!");
+          btn.innerText = "Save Pages Data";
+          syncFooterUI();
+        });
+      } else {
+        alert("Offline Mode: Saved locally.");
+        btn.innerText = "Save Pages Data";
+        syncFooterUI();
+      }
+    }
+
+    function saveSocialToDB() {
+      const btn = document.getElementById('saveSocialBtn');
+      btn.innerText = "Saving...";
+
+      const socialData = {
+        insta: document.getElementById('f-insta').value,
+        fb: document.getElementById('f-fb').value,
+        yt: document.getElementById('f-yt').value
+      };
+
+      storeSettings = { ...storeSettings, ...socialData };
+
+      if(isFirebaseReady) {
+        db.collection("settings").doc("footer").set(socialData, { merge: true }).then(() => {
+          alert("Social Media Links Saved Live!");
+          btn.innerText = "Save Social Links";
+          syncFooterUI();
+        });
+      } else {
+        alert("Offline Mode: Saved locally.");
+        btn.innerText = "Save Social Links";
+        syncFooterUI();
+      }
+    }
+
+    // ================= UI SYNC =================
+
+    function syncSettingsUI() {
+      document.getElementById('admin-dash-name').innerText = storeSettings.name;
+      document.getElementById('admin-dash-whatsapp').innerText = storeSettings.whatsapp;
+      document.getElementById('admin-dash-install-charge').innerText = `₹${storeSettings.installCharge}`;
+      
+      // Fill forms
+      document.getElementById('s-name').value = storeSettings.name;
+      document.getElementById('s-whatsapp').value = storeSettings.whatsapp;
+      document.getElementById('s-upi').value = storeSettings.upi;
+      document.getElementById('s-install-charge').value = storeSettings.installCharge;
+      document.getElementById('s-gst').value = storeSettings.gst;
+      document.getElementById('s-address').value = storeSettings.address;
+    }
+
+    function syncFooterUI() {
+      // Update Footer Text
+      document.getElementById('footer-contact').innerText = `WhatsApp: ${storeSettings.whatsapp} | GST: ${storeSettings.gst}`;
+      document.getElementById('footer-address').innerText = storeSettings.address;
+
+      // Fill Admin Forms
+      document.getElementById('f-about').value = storeSettings.aboutUs;
+      document.getElementById('f-faq').value = storeSettings.faq;
+      document.getElementById('f-privacy').value = storeSettings.privacyPolicy;
+      document.getElementById('f-return').value = storeSettings.returnPolicy;
+      document.getElementById('f-bulk').value = storeSettings.bulkOrder;
+      
+      document.getElementById('f-insta').value = storeSettings.insta;
+      document.getElementById('f-fb').value = storeSettings.fb;
+      document.getElementById('f-yt').value = storeSettings.yt;
+
+      // Update Social Links
+      document.getElementById('social-instagram').href = storeSettings.insta || "#";
+      document.getElementById('social-facebook').href = storeSettings.fb || "#";
+      document.getElementById('social-youtube').href = storeSettings.yt || "#";
+    }
+
+    function renderFrontend() {
+      const container = document.getElementById('frontend-products');
+      container.innerHTML = '';
+      products.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        card.onclick = () => openProductDetail(p.id);
+        card.innerHTML = `
+          <img src="${p.image}" class="product-img" alt="${p.brand}">
+          <div class="product-brand">${p.brand}</div>
+          <div class="product-name">${p.name}</div>
+          <div class="product-price">₹${p.price}</div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // ================= ACTIONS =================
+
+    function openProductDetail(id) {
+      const p = products.find(x => x.id === id);
+      currentProductId = id;
+
+      document.getElementById('detail-img').src = p.image;
+      document.getElementById('detail-brand').innerText = p.brand;
+      document.getElementById('detail-name').innerText = p.name;
+      document.getElementById('detail-desc-text').innerText = p.desc;
+      document.getElementById('detail-price').innerText = `₹${p.price}`;
+      document.getElementById('detail-install-charge').innerText = `₹${storeSettings.installCharge}`;
+      document.getElementById('detail-total-price').innerText = `₹${p.price + storeSettings.installCharge}`;
+      
+      const featureList = document.getElementById('detail-features-list');
+      featureList.innerHTML = '';
+      p.features.forEach(f => {
+        const li = document.createElement('li');
+        li.innerText = f;
+        featureList.appendChild(li);
+      });
+
+      switchDetailTab('desc');
+      document.getElementById('website-view').style.display = 'none';
+      document.getElementById('product-detail-view').style.display = 'block';
+      window.scrollTo(0, 0);
+    }
+
+    function closeProductDetail() {
+      document.getElementById('product-detail-view').style.display = 'none';
+      document.getElementById('website-view').style.display = 'block';
+      currentProductId = null;
+    }
+
+    function switchDetailTab(tab) {
+      document.querySelectorAll('.d-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      if(tab === 'desc') {
+        document.querySelector('.d-tab:nth-child(1)').classList.add('active');
+        document.getElementById('tab-desc').classList.add('active');
+      } else {
+        document.querySelector('.d-tab:nth-child(2)').classList.add('active');
+        document.getElementById('tab-features').classList.add('active');
+      }
+    }
+
+    function openBookingModal() {
+      if(!currentProductId) return;
+      const p = products.find(x => x.id === currentProductId);
+      document.getElementById('modal-total-amount').innerText = `₹${p.price + storeSettings.installCharge}`;
+      document.getElementById('booking-modal').classList.add('active');
+    }
+
+    function closeBookingModal() {
+      document.getElementById('booking-modal').classList.remove('active');
+    }
+
+    function confirmBooking(e) {
+      e.preventDefault();
+      const name = document.getElementById('book-name').value;
+      const phone = document.getElementById('book-phone').value;
+      const p = products.find(x => x.id === currentProductId);
+
+      const newBooking = { customer: name, contact: phone, productName: p.name, status: "Pending", date: new Date().toISOString() };
+
+      if(isFirebaseReady) {
+        db.collection("bookings").add(newBooking).then(() => {
+          alert(`Booking Confirmed!\nTotal Amount: ₹${p.price + storeSettings.installCharge}`);
+          closeBookingModal();
+          closeProductDetail();
+        });
+      } else {
+        bookings.push(newBooking);
+        renderAdminBookings();
+        alert(`Booking Confirmed!\nTotal Amount: ₹${p.price + storeSettings.installCharge}`);
+        closeBookingModal();
+        closeProductDetail();
+      }
+    }
+
+    function renderAdminBookings() {
+      const list = document.getElementById('admin-booking-list');
+      list.innerHTML = '';
+      bookings.slice().reverse().forEach(b => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${b.customer}</td><td>${b.contact}</td><td>${b.productName}</td>`;
+        list.appendChild(tr);
+      });
+    }
+
+    // ================= NAVIGATION =================
+    function toggleMenu() {
+      document.getElementById('sidebar').classList.toggle('active');
+      document.getElementById('sidebar-overlay').classList.toggle('active');
+    }
+
+    let isAdmin = false;
+    function toggleView() {
+      const websiteView = document.getElementById('website-view');
+      const detailView = document.getElementById('product-detail-view');
+      const adminView = document.getElementById('admin-view');
+      const btn = document.getElementById('toggleBtn');
+      
+      isAdmin = !isAdmin;
+      if (isAdmin) {
+        websiteView.style.display = 'none';
+        detailView.style.display = 'none';
+        adminView.style.display = 'block';
+        btn.innerText = '🛍️ Website';
+      } else {
+        websiteView.style.display = 'block';
+        detailView.style.display = 'none';
+        adminView.style.display = 'none';
+        btn.innerText = '⚙️ Admin';
+      }
+    }
+
+    function switchAdminTab(tab, btn) {
+      document.querySelectorAll('.admin-section').forEach(s => s.style.display = 'none');
+      document.querySelectorAll('.admin-menu-btn').forEach(b => b.classList.remove('active'));
+      
+      document.getElementById('admin-' + tab).style.display = 'block';
+      btn.classList.add('active');
+    }
+
+    // Initialize
+    window.onload = function() {
+      fetchSettings();
+      renderFrontend();
+    };
+  </script>
+</body>
+</html>
